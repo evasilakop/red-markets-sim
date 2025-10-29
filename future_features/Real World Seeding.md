@@ -1,4 +1,4 @@
-# Real-world seeding (future feature)
+# Real-world seeding
 
 Overview
 - Goal: Quickly bootstrap a “starting world” using real cities and open data. Pick a city, and the app seeds sector supply/demand from public datasets so you can play in a recognizable setting.
