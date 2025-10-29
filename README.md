@@ -56,7 +56,3 @@ Success Criteria (for MVP)
 - Actions and ticks update supply/demand and equilibrium, with CHIPS/competition derived correctly.
 - World can be exported to JSON and imported back with identical state.
 - No server required; data persists locally between sessions.
-
-Acceptance (for Ticket 1)
-- README contains the sections above and clearly delineates MVP vs Phase 2.
-- The Implemented Rules list matches the simplified mechanics planned for Phase 1.
