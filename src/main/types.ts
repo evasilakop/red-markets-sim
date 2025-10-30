@@ -52,3 +52,29 @@ export interface UserAction {
     type: ActionType;
     magnitude: number; // 0-10
 }
+
+// Worker message types
+export type ApplyActionsMsg = {
+    type: 'applyActions';
+    sectors: Sector[];
+    actions: Record<SectorType, UserAction[]>;
+};
+
+export type TickMsg = {
+    type: 'tick';
+    sectors: Sector[];
+};
+
+export type WorkerRequest = ApplyActionsMsg | TickMsg;
+
+export type ResultMsg = {
+    type: 'result';
+    sectors: Sector[];
+};
+
+export type ErrorMsg = {
+    type: 'error';
+    message: string;
+};
+
+export type WorkerResponse = ResultMsg | ErrorMsg;

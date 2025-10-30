@@ -1,6 +1,6 @@
 import { db } from './db';
-import { ALL_SECTORS, type World, type City, type Sector, type SectorType, type UserAction } from './types';
-import { deriveEquilibrium, chipsFor, competitionDiceFor, applyActionToSector, tickSector } from './sim';
+import { ALL_SECTORS, type World, type City, type Sector } from './types';
+import { deriveEquilibrium, chipsFor, competitionDiceFor } from './sim';
 
 // Generate UUID v4
 const uid = () => crypto.randomUUID();
@@ -72,39 +72,10 @@ export async function getCitySectors(cityId: string): Promise<Sector[]> {
     return sectors;
 }
 
-export async function applySectorAction(cityId: string, sectorType: SectorType, action: UserAction): Promise<Sector> {
-    // Get the current sector
-    const sectors = await db.sectors.where({ cityId, type: sectorType }).toArray();
-    if (sectors.length === 0) {
-        throw new Error(`Sector ${sectorType} not found in city ${cityId}`);
-    }
-
-    const currentSector = sectors[0];
-    const updatedSector = applyActionToSector(currentSector, action);
-
-    // Save the updated sector
-    await db.sectors.put(updatedSector);
-
-    // Update city's lastTick
-    await db.cities.update(cityId, { lastTick: Date.now() });
-
-    return updatedSector;
-}
-
-export async function tickAllSectorsInCity(cityId: string): Promise<Sector[]> {
-    // Get all sectors for the city
-    const sectors = await db.sectors.where({ cityId }).toArray();
-
-    // Apply tick to each sector
-    const updatedSectors = sectors.map(sector => tickSector(sector));
-
-    // Save all updated sectors
-    await db.sectors.bulkPut(updatedSectors);
-
-    // Update city's lastTick
-    await db.cities.update(cityId, { lastTick: Date.now() });
-
-    // Return sorted sectors
-    updatedSectors.sort((a, b) => a.type.localeCompare(b.type));
-    return updatedSectors;
+export async function updateSectorsInCity(cityId: string, updatedSectors: Sector[]): Promise<void> {
+    // Save updated sectors and update city timestamp
+    await db.transaction('rw', db.sectors, db.cities, async () => {
+        await db.sectors.bulkPut(updatedSectors);
+        await db.cities.update(cityId, { lastTick: Date.now() });
+    });
 }

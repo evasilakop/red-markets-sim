@@ -278,9 +278,3 @@ type WorkerResponse = ResultMsg | ErrorMsg;
 - Unit test worker message handling separately from UI
 - Integration test: compare worker results vs direct function calls (should be identical)
 - Error simulation: test worker timeout and communication failure scenarios
-
----
-
-**After adding this to README, close Issue 7 and create the implementation issue I suggested earlier.**
-
-This gives you the contract and plan documented, then you implement it in the next issue.
