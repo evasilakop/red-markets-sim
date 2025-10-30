@@ -133,3 +133,64 @@
 - IndexedDB data lives on the user’s device; clearing site data deletes it
 - Provide Export guidance in the UI; Import restores worlds from JSON files
 - If real-world seeding is used later, store source metadata in City.metadata and include it in exports for transparency
+
+# Import/Export (world JSON format)
+
+## Purpose
+- Move a world (and all its cities/sectors) between devices or back it up.
+- Keep data local-first while providing a portable bundle.
+
+## Bundle structure
+- Top-level JSON object:
+    - version: integer (starts at 1)
+    - world: { id, name, createdAt, notes? }
+    - cities: array of city objects
+        - City fields: { id, worldId, name, lat?, lon?, boundary?, lastTick, metadata? }
+    - sectors: array of sector objects
+        - Sector fields: { id, cityId, type, supply, demand, equilibrium, startingChips, competitionUndercutDice, priceIndex?, priceIndexSource?, updatedAt }
+- Notes:
+    - IDs are preserved to maintain relationships (worldId/cityId).
+    - Sector uniqueness: one per [cityId, type].
+    - History snapshots are excluded by default to keep bundles small (optional setting later).
+    - Optional fields may be absent; defaults apply on import.
+
+### Example shape (abbreviated)
+{
+"version": 1,
+"world": { "id": "uuid", "name": "My World", "createdAt": 1720000000000 },
+"cities": [
+{ "id": "uuid", "worldId": "uuid", "name": "Kansas City", "lastTick": 1720000000000 }
+],
+"sectors": [
+{ "id": "uuid", "cityId": "uuid", "type": "FOOD_WATER", "supply": 52, "demand": 47, "equilibrium": "SUBSIDIARY", "startingChips": 3, "competitionUndercutDice": -3, "updatedAt": 1720000000000 }
+]
+}
+
+## User flow
+
+### Export
+- In the app, open a world and click “Export World.”
+- A .json file is downloaded containing version, world, cities, sectors.
+- Store it safely; you can later import it to restore your world.
+- Optional (future): “Export with history” includes snapshots and may be large.
+
+### Import
+- Click “Import World,” select a .json bundle.
+- The app validates the bundle (version, required fields) and writes it to local storage.
+- If a world with the same id exists, it is updated/overwritten (document policy here).
+- After import, select the world from the list to continue.
+
+## Warnings and privacy
+- Local storage: Worlds live in your browser’s IndexedDB. Clearing site data or using private/incognito modes may erase them.
+- Backups: Export regularly if you care about your data.
+- Privacy: Bundles contain only your simulation data; no external accounts or secrets.
+
+## Versioning and future migration
+- The bundle includes a version field (starting at 1).
+- On import:
+    - If version == current: import as-is.
+    - If version < current: run migration steps (fill defaults for new fields, normalize formats).
+    - If version > current: reject or prompt to update the app (document behavior).
+- Schema evolution policy:
+    - Prefer additive changes (new optional fields with defaults).
+    - Document migration steps in README (Changelog or Data versioning section) and bump bundle version when structure changes.
