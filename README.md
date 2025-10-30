@@ -22,7 +22,7 @@
   - Tick button (advance time).
   - Basic confirmations for destructive actions.
 
-### Implemented Rules (Phase 1)
+## Implemented Rules (Phase 1)
 - Equilibrium states (derived from supply/demand):
   - Flooded, Volatile, Subsidiary, Scarce.
 - Derivations from equilibrium:
@@ -51,14 +51,14 @@
 - Performance target: 50+ cities × 10 sectors remains responsive using a Web Worker and batched writes.
 - House-rule price index is for display only; actual pricing/negotiation is out of scope.
 
-# Success Criteria (for MVP)
+## Success Criteria (for MVP)
 - User can create a world, add cities, and see sector stats.
 - Actions and ticks update supply/demand and equilibrium, with CHIPS/competition derived correctly.
 - World can be exported to JSON and imported back with identical state.
 - No server required; data persists locally between sessions.
 
 
-# Persistence (IndexedDB via Dexie)
+## Persistence (IndexedDB via Dexie)
 
 ### Storage approach
 - Local, per-browser storage using IndexedDB (wrapped by Dexie for a simpler API and transactions).
@@ -180,12 +180,12 @@
 - If a world with the same id exists, it is updated/overwritten (document policy here).
 - After import, select the world from the list to continue.
 
-## Warnings and privacy
+### Warnings and privacy
 - Local storage: Worlds live in your browser’s IndexedDB. Clearing site data or using private/incognito modes may erase them.
 - Backups: Export regularly if you care about your data.
 - Privacy: Bundles contain only your simulation data; no external accounts or secrets.
 
-## Versioning and future migration
+### Versioning and future migration
 - The bundle includes a version field (starting at 1).
 - On import:
     - If version == current: import as-is.
@@ -194,3 +194,93 @@
 - Schema evolution policy:
     - Prefer additive changes (new optional fields with defaults).
     - Document migration steps in README (Changelog or Data versioning section) and bump bundle version when structure changes.
+
+## Web Worker integration plan
+
+### Purpose
+Move simulation compute (apply actions, tick sectors) to a background Web Worker thread to keep the UI responsive, especially when processing many cities or sectors simultaneously.
+
+### Message contract
+The worker uses a simple request/response pattern via postMessage:
+
+**Request messages (main thread → worker):**
+```ts
+type ApplyActionsMsg = {
+  type: 'applyActions';
+  sectors: Sector[];
+  actions: Record<SectorType, UserAction[]>; // actions grouped by sector type
+};
+
+type TickMsg = {
+  type: 'tick';
+  sectors: Sector[];
+};
+
+type Msg = ApplyActionsMsg | TickMsg;
+```
+
+**Response messages (worker → main thread):**
+```ts
+type ResultMsg = {
+  type: 'result';
+  sectors: Sector[]; // updated sectors with new supply/demand/equilibrium/derived fields
+};
+
+type ErrorMsg = {
+  type: 'error';
+  message: string;
+};
+
+type WorkerResponse = ResultMsg | ErrorMsg;
+```
+
+### Data flow
+1. UI collects current sectors from IndexedDB
+2. UI posts message to worker with sectors + requested operations
+3. Worker applies pure simulation functions (applyActionToSector, tickSector)
+4. Worker posts back updated sectors
+5. UI bulk-writes updated sectors to IndexedDB and refreshes display
+
+### UI/UX during worker operations
+**Busy state indication:**
+- Disable action buttons and tick button during worker operations
+- Show "Simulating..." text or spinner next to disabled controls
+- Prevent multiple concurrent worker requests per city
+
+**Error handling:**
+- Worker communication timeout (5-10 seconds max)
+- Display user-friendly error message: "Simulation failed. Please try again."
+- Log detailed errors to console for debugging
+- Fallback: retry once, then disable worker and show error state
+
+**Loading states:**
+- Per-city busy state (if tickAll is added later, can tick some cities while others are busy)
+- Visual feedback: button text changes to "Processing..." and gets disabled
+- Preserve user input (selected action, magnitude) during processing
+
+### Worker implementation notes
+- Keep simulation functions pure: no IndexedDB access, no DOM manipulation
+- Worker imports types.ts and sim.ts functions directly
+- Use structured cloning for message payloads (sectors serialize cleanly)
+- Worker is stateless between requests (no persistent data)
+
+### Phase 2 extensions
+- **tickAll message**: tick multiple cities atomically
+- **Batch operations**: apply actions to multiple sectors in one worker call
+- **Progress updates**: for long-running operations, send intermediate progress messages
+
+### Browser compatibility
+- Modern browsers support Web Workers and structured cloning
+- Vite bundles workers correctly using `new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' })`
+- Graceful degradation: if worker fails to load, fall back to main-thread simulation
+
+### Testing approach
+- Unit test worker message handling separately from UI
+- Integration test: compare worker results vs direct function calls (should be identical)
+- Error simulation: test worker timeout and communication failure scenarios
+
+---
+
+**After adding this to README, close Issue 7 and create the implementation issue I suggested earlier.**
+
+This gives you the contract and plan documented, then you implement it in the next issue.
