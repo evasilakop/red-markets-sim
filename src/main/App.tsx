@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { World, City, Sector, SectorType, ActionType, UserAction } from './types';
-import { createWorld, listWorlds, addCity, listCities, getCitySectors, applySectorAction, tickAllSectorsInCity } from './worldService';
+import { createWorld, listWorlds, addCity, listCities, getCitySectors, updateSectorsInCity} from './worldService';
+import {useSimWorker} from "./useSimWorker.ts";
 
 export default function App() {
     // State for worlds
@@ -16,6 +17,15 @@ export default function App() {
 
     // State for sectors
     const [sectors, setSectors] = useState<Sector[]>([]);
+
+    const { busy, applyActions, tick } = useSimWorker();
+
+    // Add this inside your App component, just to test
+    useEffect(() => {
+        const worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
+        worker.postMessage({ type: 'test' });
+        worker.onmessage = (e) => console.log('Got from worker:', e.data);
+    }, []);
 
     // Load worlds on app start
     useEffect(() => {
@@ -89,17 +99,27 @@ export default function App() {
     };
 
     const handleApplyAction = async (sectorType: SectorType) => {
-        if (!selectedCity) return;
-
-        const action: UserAction = {
-            sector: sectorType,
-            type: selectedAction,
-            magnitude: actionMagnitude
-        };
+        if (!selectedCity || busy) return;
 
         try {
-            await applySectorAction(selectedCity.id, sectorType, action);
-            await refreshSectors(selectedCity.id); // refresh to show changes
+            // Create actions map for this single action
+            const actions: Record<SectorType, UserAction[]> = {
+                [sectorType]: [{
+                    sector: sectorType,
+                    type: selectedAction,
+                    magnitude: actionMagnitude
+                }]
+            } as Record<SectorType, UserAction[]>;
+
+            // Apply via worker
+            const updatedSectors = await applyActions(sectors, actions);
+
+            // Save to database
+            await updateSectorsInCity(selectedCity.id, updatedSectors);
+
+            // Update UI
+            setSectors(updatedSectors.sort((a, b) => a.type.localeCompare(b.type)));
+
         } catch (error) {
             console.error('Error applying action:', error);
             alert('Error applying action. Check console for details.');
@@ -107,16 +127,23 @@ export default function App() {
     };
 
     const handleTickCity = async () => {
-        if (!selectedCity) return;
-
+        if (!selectedCity || busy) return;
         try {
-            const updatedSectors = await tickAllSectorsInCity(selectedCity.id);
-            setSectors(updatedSectors);
+            // Apply tick via worker
+            const updatedSectors = await tick(sectors);
+
+            // Save to database
+            await updateSectorsInCity(selectedCity.id, updatedSectors);
+
+            // Update UI
+            setSectors(updatedSectors.sort((a, b) => a.type.localeCompare(b.type)));
+
         } catch (error) {
             console.error('Error ticking city:', error);
             alert('Error advancing time. Check console for details.');
         }
     };
+
     return (
         <div style={{ padding: 16, fontFamily: 'system-ui, sans-serif' }}>
             <h1>Red Markets World Simulator</h1>
@@ -185,46 +212,50 @@ export default function App() {
                     <h3>Sectors in {selectedCity.name}</h3>
 
                     {/* Action Controls */}
-                    <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f9f9f9', borderRadius: 4 }}>
-                        <h4>Actions</h4>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                            <label>Action:</label>
-                            <select
-                                value={selectedAction}
-                                onChange={e => setSelectedAction(e.target.value as ActionType)}
-                                style={{ minWidth: 150 }}
-                            >
-                                <option value="MARKET">Market</option>
-                                <option value="INCREASE_DEMAND">Increase Demand</option>
-                                <option value="DECREASE_DEMAND">Decrease Demand</option>
-                                <option value="PRICE_LOW">Price Low</option>
-                                <option value="SPECULATE">Speculate</option>
-                                <option value="INCREASE_SUPPLY">Increase Supply</option>
-                                <option value="SUBCONTRACT">Subcontract</option>
-                                <option value="REDUCE_SUPPLY">Reduce Supply</option>
-                                <option value="RESTRICT_FLOW">Restrict Flow</option>
-                                <option value="SABOTAGE">Sabotage</option>
-                            </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                        <label>Action:</label>
+                        <select
+                            value={selectedAction}
+                            onChange={e => setSelectedAction(e.target.value as ActionType)}
+                            style={{ minWidth: 150 }}
+                            disabled={busy}
+                        >
+                            <option value="MARKET">Market</option>
+                            <option value="INCREASE_DEMAND">Increase Demand</option>
+                            <option value="DECREASE_DEMAND">Decrease Demand</option>
+                            <option value="PRICE_LOW">Price Low</option>
+                            <option value="SPECULATE">Speculate</option>
+                            <option value="INCREASE_SUPPLY">Increase Supply</option>
+                            <option value="SUBCONTRACT">Subcontract</option>
+                            <option value="REDUCE_SUPPLY">Reduce Supply</option>
+                            <option value="RESTRICT_FLOW">Restrict Flow</option>
+                            <option value="SABOTAGE">Sabotage</option>
+                        </select>
+                        <label>Magnitude:</label>
+                        <input
+                            type="number"
+                            min={0}
+                            max={10}
+                            value={actionMagnitude}
+                            onChange={e => setActionMagnitude(parseInt(e.target.value) || 0)}
+                            style={{width: 60}}
+                        />
 
-                            <label>Magnitude:</label>
-                            <input
-                                type="number"
-                                min={0}
-                                max={10}
-                                value={actionMagnitude}
-                                onChange={e => setActionMagnitude(parseInt(e.target.value) || 0)}
-                                style={{ width: 60 }}
-                            />
-
-                            <button
-                                onClick={handleTickCity}
-                                style={{ marginLeft: 20, padding: '4px 12px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: 4 }}
-                            >
-                                Advance Time (Tick)
-                            </button>
-                        </div>
+                        <button
+                            onClick={handleTickCity}
+                            disabled={busy}
+                            style={{
+                                marginLeft: 20,
+                                padding: '4px 12px',
+                                backgroundColor: busy ? '#ccc' : '#007bff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 4
+                            }}
+                        >
+                            {busy ? 'Processing...' : 'Advance Time (Tick)'}
+                        </button>
                     </div>
-
                     {/* Sectors Table */}
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
                         <thead>
@@ -265,9 +296,14 @@ export default function App() {
                                 <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
                                     <button
                                         onClick={() => handleApplyAction(sector.type)}
-                                        style={{ padding: '2px 8px', fontSize: '12px' }}
+                                        disabled={busy}
+                                        style={{
+                                            padding: '2px 8px',
+                                            fontSize: '12px',
+                                            backgroundColor: busy ? '#ccc' : undefined
+                                        }}
                                     >
-                                        Apply
+                                        {busy ? '...' : 'Apply'}
                                     </button>
                                 </td>
                             </tr>
