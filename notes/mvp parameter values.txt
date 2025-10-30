@@ -1,0 +1,103 @@
+MVP parameter values
+
+Thresholds and tie-breakers
+- HIGH threshold: 0.60
+- LOW threshold: 0.40
+- Mid-band diff cutoffs: +0.10 (FLOODED), −0.10 (SCARCE)
+- Bias when no previous equilibrium: (S + D)/2 ≥ 0.50 → VOLATILE, else SUBSIDIARY
+
+Derived mappings
+- Starting CHIPS: FLOODED=2, VOLATILE=0, SUBSIDIARY=3, SCARCE=1
+- Competition undercut dice: FLOODED=−2, VOLATILE=0, SUBSIDIARY=−3, SCARCE=−1
+- Price index (display-only): FLOODED=0.8, VOLATILE=1.0, SUBSIDIARY=0.9, SCARCE=1.3
+
+Action effects (per magnitude m, clamp results to 0–100)
+- Increase supply (INCREASE_SUPPLY, SUBCONTRACT): +3 × m
+- Decrease supply (REDUCE_SUPPLY, RESTRICT_FLOW, SABOTAGE): −4 × m
+- Increase demand (INCREASE_DEMAND, MARKET): +3 × m
+- Decrease demand (DECREASE_DEMAND): −3 × m
+- Price low (PRICE_LOW): +2 × m (to demand)
+- Speculate (SPECULATE): +4 × m (to demand), with snapback chance below
+
+Ambient noise and special cases
+- Ambient noise per update: supply += random integer in [−2, +2], demand += random integer in [−2, +2]
+- Speculation snapback: 10% chance to apply demand −10 immediately after SPECULATE
+- ELIMINATE_COMPETITION (optional in MVP): improve competition dice toward zero by +1 die per 5 magnitude (capped at 0)
+
+Initialization defaults (for new cities/sectors)
+- Initial supply/demand: start at 50 ± random integer in [−5, +5]
+- Number of sectors: 10 (Food/Water, Shelter, Material, Products, Energy, Medicine, Speculative, Transportation, Data, HR)
+
+Update cadence
+- User-driven (no background scheduler in MVP): apply actions on demand; “Advance Time (Tick)” button triggers one ambient update
+
+Constraints
+- Clamp supply and demand after every change to [0, 100]
+- Derived fields (equilibrium, CHIPS, competition, price index) are recalculated after each update and not directly editable
+
+
+
+Hybrid approach: let users set price index in cities they visit, and have the engine infer a price index for the other cities.
+It's an optional, clearly labeled house rule.
+
+How to design it cleanly
+- Feature toggle
+  - Add a toggle: “Suggest price index for unvisited cities.” When off, no inference happens.
+  - Label inferred values as “suggested” and user-entered values as “user.”
+
+- Data model
+  - Sector.priceIndex: user-defined number or short text. Add Sector.priceIndexSource: 'user' | 'inferred' | null.
+  - City.visited: boolean (or track “visited sectors” if you prefer per-sector control).
+
+- Inference inputs
+  - Canonical state: supply, demand, equilibrium (strict rules).
+  - Geography (optional): distance between cities if you add lat/lon.
+  - Sector features (optional): if later you integrate OSM/world bank seeding.
+  - User-set priceIndex samples from visited cities.
+
+- Inference strategies (pick one to start)
+  1) Simple heuristic (fast and transparent)
+     - Base on supply vs demand: priceIndex = clamp(1 + k*(demand - supply)/100, min, max)
+     - Calibrate k and bounds (e.g., k=0.6, min=0.7, max=1.5).
+     - Bias by equilibrium: add small offsets (e.g., +0.1 for Scarce, -0.1 for Flooded).
+     - Use user-set values only in visited cities; ignore for inference.
+  2) Weighted averaging by proximity (if you have coordinates)
+     - For each unvisited city, infer as a distance-weighted average of nearby visited cities’ user-set priceIndex, per sector.
+     - Blend with heuristic baseline: inferred = α*heuristic + (1-α)*neighborAvg (α ~ 0.5).
+  3) Learn from user-set values (light regression)
+     - Fit a simple linear model per sector: priceIndex ~ a + b*(demand - supply) + c*(equilibrium one-hot).
+     - Train on visited cities; predict for others. Refit when user adds/changes values.
+  4) Confidence scoring (nice UX add-on)
+     - Show confidence as high/medium/low based on number of nearby samples and variance.
+
+- UX rules
+  - Editing precedence: If user edits an inferred value, switch source to 'user' and stop overwriting it.
+  - Visibility: Display a small tag: “user” vs “suggested.” Allow a clear/reset button to restore inference.
+  - Explain: Tooltip or legend: “Suggested price index is a house rule for guidance; strict rules remain equilibrium, CHIPS, competition.”
+
+- Update cadence
+  - Recompute inference:
+    - When supply/demand/equilibrium change (ticks/actions).
+    - When user sets/clears priceIndex in any city.
+    - Cache results per city/sector; avoid recomputing during rapid UI changes.
+
+- Persistence and import/export
+  - Persist priceIndex and priceIndexSource in sectors.
+  - Include both fields in export/import bundles.
+
+- Performance
+  - Heuristic and proximity averaging are O(cities × sectors), trivial for dozens of cities.
+  - If you add regression, keep it per sector and refit quickly; still fine at your scale.
+
+- Documentation placement
+  - Simulation Rules: note that “Suggested price index” is an optional house rule; engine inference does not affect canonical outputs.
+  - Data Model: add priceIndex and priceIndexSource fields.
+  - UI/UX: document edit behavior, tags, and the clear/reset flow.
+  - Settings: document the feature toggle.
+
+Acceptance criteria for this feature
+- Users can set priceIndex in visited cities; those entries persist and are clearly tagged.
+- Unvisited cities show a suggested priceIndex (when toggle is on), tagged “suggested.”
+- Editing an inferred value converts it to “user” and prevents auto-overwrite.
+- Inference updates when market state or user entries change.
+- Documentation clarifies that suggested price index is non-canonical and optional.

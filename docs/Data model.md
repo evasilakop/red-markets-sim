@@ -44,6 +44,7 @@ Goals
 - DECREASE_DEMAND
 - SPECULATE
 - Optional later: ELIMINATE_COMPETITION (affects competition dice rather than S/D directly)
+- ROLLBACK World-level Undo restores the previous snapshot atomically across all cities/sectors
 
 ## Relationships and constraints
 - World 1—N City
