@@ -162,7 +162,7 @@
 { "id": "uuid", "worldId": "uuid", "name": "Kansas City", "lastTick": 1720000000000 }
 ],
 "sectors": [
-{ "id": "uuid", "cityId": "uuid", "type": "FOOD_WATER", "supply": 52, "demand": 47, "equilibrium": "SUBSIDIARY", "startingChips": 3, "competitionUndercutDice": -3, "updatedAt": 1720000000000 }
+{ "id": "uuid", "cityId": "uuid", "type": "FOOD & WATER", "supply": 52, "demand": 47, "equilibrium": "SUBSIDIARY", "startingChips": 3, "competitionUndercutDice": -3, "updatedAt": 1720000000000 }
 ]
 }
 
