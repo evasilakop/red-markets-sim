@@ -49,7 +49,7 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
         };
     });
 
-    // Save city and sectors in a transaction (all-or-nothing)
+    // Save city and sectors in a transaction (either both succeed or both fail)
     await db.transaction('rw', db.cities, db.sectors, async () => {
         await db.cities.add(city);
         await db.sectors.bulkAdd(sectors);
