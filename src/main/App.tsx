@@ -18,9 +18,10 @@ export default function App() {
     // State for sectors
     const [sectors, setSectors] = useState<Sector[]>([]);
 
+    // WebWorker states
     const { busy, applyActions, tick } = useSimWorker();
 
-    // Add this inside your App component, just to test
+    // just to test React effects
     useEffect(() => {
         const worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
         worker.postMessage({ type: 'test' });
@@ -62,6 +63,12 @@ export default function App() {
         }
     }
 
+    /*
+    Why refresh instead of just adding to state?
+        Single source of truth: Database is authoritative
+        Consistency: Ensures UI matches database exactly
+        Simplicity: Same logic for all city list updates
+     */
     async function refreshCities(worldId: string) {
         const cs = await listCities(worldId);
         setCities(cs);
@@ -86,7 +93,7 @@ export default function App() {
 
     const handleAddCity = async () => {
         if (!selectedWorld) return;
-        const name = prompt('City name?') || 'New City';
+        const name = prompt('City name:') || 'New City';
         const { city } = await addCity(selectedWorld.id, name);
         await refreshCities(selectedWorld.id);
         setSelectedCity(city); // auto-select the new city
@@ -144,6 +151,7 @@ export default function App() {
         }
     };
 
+    // Render
     return (
         <div style={{ padding: 16, fontFamily: 'system-ui, sans-serif' }}>
             <h1>Red Markets World Simulator</h1>
