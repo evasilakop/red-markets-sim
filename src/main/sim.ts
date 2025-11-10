@@ -69,7 +69,9 @@ export function applyActionToSector(sector: Sector, action: UserAction): Sector 
     const equilibrium = deriveEquilibrium(supply, demand, sector.equilibrium);
 
     return {
+        // copy all the properties from the original object: create a new object, compare it to the old one, and re-render if needed
         ...sector,
+        // but override with new values for the following variables
         supply,
         demand,
         equilibrium,
