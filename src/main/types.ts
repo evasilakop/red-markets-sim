@@ -78,3 +78,9 @@ export type ErrorMsg = {
 };
 
 export type WorkerResponse = ResultMsg | ErrorMsg;
+
+export type OperationResult = {
+    success: boolean;
+    message?: string;
+    error?: string;
+};

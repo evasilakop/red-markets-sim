@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { World, City, Sector, SectorType, ActionType, UserAction } from './types';
 import { createWorld, listWorlds, addCity, listCities, getCitySectors, updateSectorsInCity} from './worldService';
+import { exportWorld, importWorld, deleteWorld } from './worldService';
 import {useSimWorker} from "./useSimWorker.ts";
+import './App.css';
 
 export default function App() {
     // State for worlds
@@ -83,11 +85,21 @@ export default function App() {
         setSectors(ss);
     }
 
-    // Event handlers
+    /*
+    ========================================
+                Event handlers
+    ========================================
+     */
     const handleCreateWorld = async () => {
-        const world = await createWorld(newWorldName);
+        const world = await createWorld(newWorldName || 'World');
         await refreshWorlds();
         setSelectedWorld(world);
+
+        // Clear city and sector states for the new world
+        setSelectedCity(null);
+        setCities([]);
+        setSectors([]);
+
         setNewWorldName('My World'); // reset input
     };
 
@@ -151,84 +163,205 @@ export default function App() {
         }
     };
 
-    // Render
+    const handleExportWorld = async () => {
+        if (!selectedWorld) return;
+
+        try {
+            const result = await exportWorld(selectedWorld.id);
+            if (result.success) {
+                console.log(result.message); // TODO add proper messages later
+            } else {
+                console.error(result.error);
+                alert(result.error);
+            }
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('Export failed. Check console for details.');
+        }
+    };
+
+    const handleDeleteWorld = async () => {
+        if (!selectedWorld) return;
+
+        // Confirmation dialog
+        const confirmed = confirm(`Delete world "${selectedWorld.name}"? This will remove all cities and sectors. This cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            const result = await deleteWorld(selectedWorld.id);
+            if (result.success) {
+                console.log(result.message);
+                // Clear selected world and refresh list
+                setSelectedWorld(null);
+                setSelectedCity(null);
+                setSectors([]);
+                await refreshWorlds();
+            } else {
+                console.error(result.error);
+                alert(result.error);
+            }
+        } catch (error) {
+            console.error('Delete failed:', error);
+            alert('Delete failed. Check console for details.');
+        }
+    };
+
+    const handleImportWorld = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const result = await importWorld(file);
+            if (result.success) {
+                console.log(`World "${result.worldName}" imported successfully`);
+                // Refresh worlds list and select the imported one
+                await refreshWorlds();
+                const worlds = await listWorlds();
+                const importedWorld = worlds.find(w => w.name === result.worldName);
+                if (importedWorld) {
+                    setSelectedWorld(importedWorld);
+                }
+            } else {
+                console.error(result.error);
+                alert(`Import failed: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Import failed:', error);
+            alert('Import failed. Check console for details.');
+        }
+
+        // Clear the file input
+        e.target.value = '';
+    };
+
+    /*
+    =================================================
+                        Render
+    =================================================
+     */
     return (
         <div style={{ padding: 16, fontFamily: 'system-ui, sans-serif' }}>
             <h1>Red Markets World Simulator</h1>
 
             {/* World Management */}
-            <section style={{ marginBottom: 20, padding: 12, border: '1px solid #ddd', borderRadius: 4 }}>
-                <h3>Worlds</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <label>Select world:</label>
+            <section className="section">
+                <h3>World Management</h3>
+
+                {/* World Selection Row */}
+                <div className="flex-row">
+                    <label htmlFor="world-select" className="label-wide">World:</label>
                     <select
+                        id="world-select"
                         value={selectedWorld?.id || ''}
                         onChange={e => handleWorldChange(e.target.value)}
-                        style={{ minWidth: 150 }}
+                        className="input-wide"
                     >
-                        <option value="">-- Select a world --</option>
+                    <option value="">
+                            {worlds.length === 0 ? 'No worlds yet' : 'Select a world...'}
+                        </option>
                         {worlds.map(w => (
                             <option key={w.id} value={w.id}>{w.name}</option>
                         ))}
                     </select>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+                {/* Create New World Row */}
+                <div className="flex-row">
+                    <label className="label-wide">Create new:</label>
                     <input
                         type="text"
                         value={newWorldName}
                         onChange={e => setNewWorldName(e.target.value)}
                         placeholder="World name"
-                        style={{ minWidth: 150 }}
+                        className="input-wide"
                     />
-                    <button onClick={handleCreateWorld}>Create World</button>
+                    <button onClick={handleCreateWorld} className="btn btn-primary">
+                        Create World
+                    </button>
+                </div>
+
+                {/* World Actions Row */}
+                {selectedWorld && (
+                    <div className="flex-row">
+                        <label className="label-wide">Actions:</label>
+                        <div className="button-group">
+                            <button onClick={() => handleExportWorld()} className="btn btn-success">
+                                Export World
+                            </button>
+                            <button onClick={() => handleDeleteWorld()} className="btn btn-danger">
+                                Delete World
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Import Row */}
+                <div className="flex-row world-import">
+                    <label htmlFor="import-world-file" className="label-wide">Import world:</label>
+                    <input
+                        id="import-world-file"
+                        type="file"
+                        accept=".json,.rmworld.json"
+                        onChange={handleImportWorld}
+                        className="input-wide"
+                    />
                 </div>
             </section>
 
             {/* City Management */}
             {selectedWorld && (
-                <section style={{ marginBottom: 20, padding: 12, border: '1px solid #ddd', borderRadius: 4 }}>
+                <section className="section">
                     <h3>Cities in {selectedWorld.name}</h3>
-                    <div style={{ marginBottom: 12 }}>
-                        <button onClick={handleAddCity}>Add City</button>
+
+                    <div className="flex-row">
+                        <button onClick={handleAddCity} className="btn btn-primary">
+                            Add City
+                        </button>
                     </div>
+
                     {cities.length > 0 ? (
-                        <div>
-                            <label>Select city: </label>
+                        <div className="flex-row">
+                            <label htmlFor="city-select" className="label">Select city:</label>
                             <select
+                                id="city-select"
                                 value={selectedCity?.id || ''}
                                 onChange={e => {
                                     const city = cities.find(c => c.id === e.target.value) || null;
                                     setSelectedCity(city);
                                 }}
-                                style={{ minWidth: 150 }}
+                                className="input-wide"
                             >
-                                <option value="">-- Select a city --</option>
+                            <option value="">-- Select a city --</option>
                                 {cities.map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
                         </div>
                     ) : (
-                        <p style={{ color: '#666', fontStyle: 'italic' }}>No cities yet. Add one to get started!</p>
+                        <p className="city-empty-state">
+                            No cities yet. Add one to get started!
+                        </p>
                     )}
                 </section>
             )}
 
             {/* Sector Display */}
             {selectedCity && sectors.length > 0 && (
-                <section style={{ padding: 12, border: '1px solid #ddd', borderRadius: 4 }}>
+                <section className="sector-display">
                     <h3>Sectors in {selectedCity.name}</h3>
 
                     {/* Action Controls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                        <label>Action:</label>
+                    <div className="flex-row action-controls">
+                        <label className="label">Action:</label>
+                        <label htmlFor="action-select" className="label">Action:</label>
                         <select
+                            id="action-select"
                             value={selectedAction}
                             onChange={e => setSelectedAction(e.target.value as ActionType)}
-                            style={{ minWidth: 150 }}
+                            className="input-wide"
                             disabled={busy}
                         >
-                            <option value="MARKET">Market</option>
+                        <option value="MARKET">Market</option>
                             <option value="INCREASE_DEMAND">Increase Demand</option>
                             <option value="DECREASE_DEMAND">Decrease Demand</option>
                             <option value="PRICE_LOW">Price Low</option>
@@ -239,77 +372,60 @@ export default function App() {
                             <option value="RESTRICT_FLOW">Restrict Flow</option>
                             <option value="SABOTAGE">Sabotage</option>
                         </select>
-                        <label>Magnitude:</label>
+
+                        <label htmlFor="action-magnitude" className="label">Magnitude:</label>
                         <input
+                            id="action-magnitude"
                             type="number"
                             min={0}
                             max={10}
                             value={actionMagnitude}
                             onChange={e => setActionMagnitude(parseInt(e.target.value) || 0)}
-                            style={{width: 60}}
+                            className="input-narrow"
+                            disabled={busy}
                         />
 
                         <button
                             onClick={handleTickCity}
                             disabled={busy}
-                            style={{
-                                marginLeft: 20,
-                                padding: '4px 12px',
-                                backgroundColor: busy ? '#ccc' : '#007bff',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: 4
-                            }}
+                            className="btn btn-primary tick-button"
                         >
                             {busy ? 'Processing...' : 'Advance Time (Tick)'}
                         </button>
                     </div>
+
                     {/* Sectors Table */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                    <table className="sectors-table">
                         <thead>
-                        <tr style={{ backgroundColor: '#f5f5f5' }}>
-                            <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'left' }}>Sector</th>
-                            <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>Supply</th>
-                            <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>Demand</th>
-                            <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>Equilibrium</th>
-                            <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>CHIPS</th>
-                            <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>Competition</th>
-                            <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>Action</th>
+                        <tr>
+                            <th className="text-left">Sector</th>
+                            <th className="text-center">Supply</th>
+                            <th className="text-center">Demand</th>
+                            <th className="text-center">Equilibrium</th>
+                            <th className="text-center">CHIPS</th>
+                            <th className="text-center">Competition</th>
+                            <th className="text-center">Action</th>
                         </tr>
                         </thead>
                         <tbody>
                         {sectors.map(sector => (
                             <tr key={sector.id}>
-                                <td style={{ padding: 8, border: '1px solid #ddd', fontFamily: 'monospace' }}>
-                                    {sector.type}
-                                </td>
-                                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
-                                    {sector.supply}
-                                </td>
-                                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
-                                    {sector.demand}
-                                </td>
-                                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
-                                    {sector.equilibrium}
-                                </td>
-                                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
-                                    {sector.startingChips}
-                                </td>
-                                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
+                                <td className="sector-name">{sector.type}</td>
+                                <td>{sector.supply}</td>
+                                <td>{sector.demand}</td>
+                                <td>{sector.equilibrium}</td>
+                                <td>{sector.startingChips}</td>
+                                <td>
                                     {sector.competitionUndercutDice === 0
                                         ? 'No comp'
                                         : `${sector.competitionUndercutDice}d10 undercut`
                                     }
                                 </td>
-                                <td style={{ padding: 8, border: '1px solid #ddd', textAlign: 'center' }}>
+                                <td>
                                     <button
                                         onClick={() => handleApplyAction(sector.type)}
                                         disabled={busy}
-                                        style={{
-                                            padding: '2px 8px',
-                                            fontSize: '12px',
-                                            backgroundColor: busy ? '#ccc' : undefined
-                                        }}
+                                        className="btn-small"
                                     >
                                         {busy ? '...' : 'Apply'}
                                     </button>
