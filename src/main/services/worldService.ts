@@ -1,14 +1,8 @@
 import { db } from '../db.ts';
 import { ALL_SECTORS, type World, type City, type Sector, type OperationResult } from '../common/types.ts';
 import { deriveEquilibrium, chipsFor, competitionDiceFor } from '../sim.ts';
+import {validateWorldBundle, type WorldBundle} from '../components/WorldManager/validation.ts';
 
-interface WorldBundle {
-    version: number;
-    world: World;
-    cities: City[];
-    sectors: Sector[];
-    exportedAt: number;
-}
 
 // Generate UUID v4
 const uid = () => crypto.randomUUID();
@@ -221,63 +215,6 @@ export async function importWorld(file: File): Promise<{ success: boolean; world
     }
 }
 
-// Helper function to validate the bundle structure
-function validateWorldBundle(bundle: any): string | null {
-    // Check if bundle has required top-level properties
-    if (!bundle || typeof bundle !== 'object') {
-        return 'Invalid file format.';
-    }
-
-    if (typeof bundle.version !== 'number') {
-        return 'Missing or invalid version field.';
-    }
-
-    if (!bundle.world || typeof bundle.world !== 'object') {
-        return 'Missing or invalid world data.';
-    }
-
-    if (!Array.isArray(bundle.cities)) {
-        return 'Missing or invalid cities data.';
-    }
-
-    if (!Array.isArray(bundle.sectors)) {
-        return 'Missing or invalid sectors data.';
-    }
-
-    // Validate world object
-    const world = bundle.world;
-    if (!world.id || !world.name || typeof world.createdAt !== 'number') {
-        return 'Invalid world data structure.';
-    }
-
-    // Validate cities have required fields
-    for (const city of bundle.cities) {
-        if (!city.id || !city.worldId || !city.name || typeof city.lastTick !== 'number') {
-            return 'Invalid city data structure.';
-        }
-        if (city.worldId !== world.id) {
-            return 'City data does not match world ID.';
-        }
-    }
-
-    // Validate sectors have required fields
-    const cityIds = bundle.cities.map((c: City) => c.id);
-    for (const sector of bundle.sectors) {
-        if (!sector.id || !sector.cityId || !sector.type ||
-            typeof sector.supply !== 'number' || typeof sector.demand !== 'number') {
-            return 'Invalid sector data structure.';
-        }
-        if (!cityIds.includes(sector.cityId)) {
-            return 'Sector data references non-existent city.';
-        }
-        // Validate supply/demand ranges
-        if (sector.supply < 0 || sector.supply > 100 || sector.demand < 0 || sector.demand > 100) {
-            return 'Invalid sector supply/demand values (must be 0-100).';
-        }
-    }
-
-    return null; // No errors
-}
 
 // Delete children first, then parents
 export async function deleteWorld(worldId: string): Promise<OperationResult> {

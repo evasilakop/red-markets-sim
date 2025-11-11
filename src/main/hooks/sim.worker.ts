@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
-import type { WorkerRequest, WorkerResponse, Sector } from './common/types.ts';
-import { applyActionToSector, tickSector } from './sim';
+import type { WorkerRequest, WorkerResponse, Sector } from '../common/types.ts';
+import { applyActionToSector, tickSector } from '../sim.ts';
 
 // Handle messages from the main thread
 self.onmessage = (e: MessageEvent<WorkerRequest>) => {

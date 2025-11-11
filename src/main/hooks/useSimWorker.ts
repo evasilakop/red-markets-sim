@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import type {Sector, SectorType, UserAction, WorkerRequest, WorkerResponse} from './common/types.ts';
+import type {Sector, SectorType, UserAction, WorkerRequest, WorkerResponse} from '../common/types.ts';
 
 export function useSimWorker() {
     const workerRef = useRef<Worker | null>(null);
@@ -74,11 +74,10 @@ export function useSimWorker() {
     const tick = async (sectors: Sector[]): Promise<Sector[]> => {
         setBusy(true);
         try {
-            const result = await sendToWorker({
+            return await sendToWorker({
                 type: 'tick',
                 sectors
             });
-            return result;
         } finally {
             setBusy(false);
         }
