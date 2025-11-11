@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import type { World, City, Sector, SectorType, ActionType, UserAction } from './types';
-import { createWorld, listWorlds, addCity, listCities, getCitySectors, updateSectorsInCity} from './worldService';
-import { exportWorld, importWorld, deleteWorld } from './worldService';
+import type { World, City, Sector, SectorType, ActionType, UserAction } from './common/types.ts';
+import { createWorld, listWorlds, addCity, listCities, getCitySectors, updateSectorsInCity} from './services/worldService.ts';
+import { exportWorld, importWorld, deleteWorld } from './services/worldService.ts';
 import {useSimWorker} from "./useSimWorker.ts";
 import './App.css';
 
 export default function App() {
+    // File compatibility checks
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+    const SUPPORTED_FILE_TYPES = ['application/json', 'text/plain']; // JSON files can have either MIME type
+
     // State for worlds
     const [worlds, setWorlds] = useState<World[]>([]);
     const [selectedWorld, setSelectedWorld] = useState<World | null>(null);
@@ -22,6 +26,58 @@ export default function App() {
 
     // WebWorker states
     const { busy, applyActions, tick } = useSimWorker();
+
+    // World management states
+    const [isImporting, setIsImporting] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Error messages states
+    const [message, setMessage] = useState<{
+        type: 'success' | 'error' | 'warning';
+        text: string;
+    } | null>(null);
+
+    // Helper function to show messages
+    const showMessage = (type: 'success' | 'error' | 'warning', text: string) => {
+        setMessage({ type, text });
+        // Auto-clear after 5 seconds
+        setTimeout(() => setMessage(null), 5000);
+    };
+
+    // Helper function to check browser compatibility
+    const checkBrowserSupport = (): { supported: boolean; missingFeatures: string[] } => {
+        const missing: string[] = [];
+
+        // Check for File API support
+        if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+            missing.push('File API');
+        }
+
+        // Check for JSON support (should be universal, but just in case)
+        if (!window.JSON) {
+            missing.push('JSON parsing');
+        }
+
+        // Check for URL.createObjectURL (for downloads)
+        if (!window.URL || !window.URL.createObjectURL) {
+            missing.push('File downloads');
+        }
+
+        return {
+            supported: missing.length === 0,
+            missingFeatures: missing
+        };
+    };
+
+    // Helper function to format file size for user display
+    const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
 
     // just to test React effects
     useEffect(() => {
@@ -54,6 +110,17 @@ export default function App() {
             setSectors([]);
         }
     }, [selectedCity]);
+
+    // To check browser features support
+    useEffect(() => {
+        const browserCheck = checkBrowserSupport();
+        if (!browserCheck.supported) {
+            showMessage('error',
+                `Your browser doesn't support required features: ${browserCheck.missingFeatures.join(', ')}. Please use a modern browser.`
+            );
+        }
+    }, []);
+
 
     // Helper functions
     async function refreshWorlds() {
@@ -164,34 +231,40 @@ export default function App() {
     };
 
     const handleExportWorld = async () => {
-        if (!selectedWorld) return;
-
+        if (!selectedWorld || isExporting) return;
+        setIsExporting(true);
+        setMessage(null); // Clear previous messages
         try {
             const result = await exportWorld(selectedWorld.id);
             if (result.success) {
-                console.log(result.message); // TODO add proper messages later
+                showMessage('success', result.message || 'World exported successfully');
             } else {
-                console.error(result.error);
+                showMessage('error', result.error || 'Export failed');
                 alert(result.error);
             }
         } catch (error) {
             console.error('Export failed:', error);
-            alert('Export failed. Check console for details.');
+            showMessage('error', 'Export failed. Please try again.');
+        } finally {
+            setIsExporting(false);
         }
     };
 
     const handleDeleteWorld = async () => {
-        if (!selectedWorld) return;
+        if (!selectedWorld || isDeleting) return;
 
         // Confirmation dialog
         const confirmed = confirm(`Delete world "${selectedWorld.name}"? This will remove all cities and sectors. This cannot be undone.`);
         if (!confirmed) return;
+        setIsDeleting(true);
+        setMessage(null);
 
         try {
             const result = await deleteWorld(selectedWorld.id);
             if (result.success) {
                 console.log(result.message);
                 // Clear selected world and refresh list
+                showMessage('success', result.message || 'World deleted successfully');
                 setSelectedWorld(null);
                 setSelectedCity(null);
                 setSectors([]);
@@ -202,19 +275,46 @@ export default function App() {
             }
         } catch (error) {
             console.error('Delete failed:', error);
-            alert('Delete failed. Check console for details.');
+            showMessage('error', 'Delete failed. Please try again.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
     const handleImportWorld = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || isImporting) return;
+
+        // Check browser support first
+        const browserCheck = checkBrowserSupport();
+        if (!browserCheck.supported) {
+            showMessage('error', `Browser not supported. Missing: ${browserCheck.missingFeatures.join(', ')}`);
+            e.target.value = '';
+            return;
+        }
+
+        // Check file size
+        if (file.size > MAX_FILE_SIZE) {
+            showMessage('error',
+                `File too large (${formatFileSize(file.size)}). Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`
+            );
+            e.target.value = '';
+            return;
+        }
+
+        // Check file type (basic check - we'll do more validation after reading)
+        if (!SUPPORTED_FILE_TYPES.includes(file.type) && !file.name.endsWith('.json') && !file.name.endsWith('.rmworld.json')) {
+            showMessage('warning', 'Unexpected file type. Expected .json or .rmworld.json file.');
+            // Don't return here - let them try anyway, our validation will catch issues
+        }
+
+        setIsImporting(true);
+        setMessage(null);
 
         try {
             const result = await importWorld(file);
             if (result.success) {
-                console.log(`World "${result.worldName}" imported successfully`);
-                // Refresh worlds list and select the imported one
+                showMessage('success', `World "${result.worldName}" imported successfully (${formatFileSize(file.size)})`);
                 await refreshWorlds();
                 const worlds = await listWorlds();
                 const importedWorld = worlds.find(w => w.name === result.worldName);
@@ -222,17 +322,99 @@ export default function App() {
                     setSelectedWorld(importedWorld);
                 }
             } else {
-                console.error(result.error);
-                alert(`Import failed: ${result.error}`);
+                showMessage('error', result.error || 'Import failed');
             }
         } catch (error) {
             console.error('Import failed:', error);
-            alert('Import failed. Check console for details.');
+            if (error instanceof Error) {
+                // Check for specific browser errors
+                if (error.message.includes('QuotaExceededError')) {
+                    showMessage('error', 'Not enough storage space available.');
+                } else if (error.message.includes('out of memory')) {
+                    showMessage('error', 'File too large for available memory.');
+                } else {
+                    showMessage('error', `Import failed: ${error.message}`);
+                }
+            } else {
+                showMessage('error', 'Import failed. Please try again.');
+            }
+        } finally {
+            setIsImporting(false);
+            e.target.value = '';
+        }
+    };
+
+    /*
+    =================================================
+                        Tests
+    =================================================
+     */
+
+    // Add this test function (you can remove it later or keep it for debugging)
+    const testExportImportRoundtrip = async () => {
+        if (!selectedWorld) {
+            showMessage('error', 'Select a world to test roundtrip');
+            return;
         }
 
-        // Clear the file input
-        e.target.value = '';
+        console.log('🧪 Testing export → import roundtrip...');
+
+        try {
+            // Get original data
+            const originalWorld = selectedWorld;
+            const originalCities = await listCities(selectedWorld.id);
+            const originalSectors = [];
+            for (const city of originalCities) {
+                const sectors = await getCitySectors(city.id);
+                originalSectors.push(...sectors);
+            }
+
+            // Export
+            const exportResult = await exportWorld(selectedWorld.id);
+            if (!exportResult.success) {
+                console.error('❌ Export failed:', exportResult.error);
+                return;
+            }
+
+            console.log('✅ Export successful');
+            console.log('📊 Original data:', {
+                world: originalWorld,
+                cities: originalCities.length,
+                sectors: originalSectors.length
+            });
+
+            showMessage('success', 'Roundtrip test completed - check console for details');
+
+        } catch (error) {
+            console.error('❌ Roundtrip test failed:', error);
+            showMessage('error', 'Roundtrip test failed - check console');
+        }
     };
+
+// Add this temporary test function
+    const createLargeTestFile = () => {
+        // Create a large JSON string (about 15MB)
+        const largeData = {
+            version: 1,
+            world: { id: "test", name: "Large World", createdAt: Date.now() },
+            cities: [],
+            sectors: [],
+            // Add lots of fake data to make it large
+            padding: "x".repeat(15 * 1024 * 1024) // 15MB of 'x' characters
+        };
+
+        const blob = new Blob([JSON.stringify(largeData)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'large-test-file.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+
 
     /*
     =================================================
@@ -246,6 +428,16 @@ export default function App() {
             {/* World Management */}
             <section className="section">
                 <h3>World Management</h3>
+                <button onClick={createLargeTestFile} className="btn">Create Large Test File</button>
+
+                {/* Message Display */}
+                {message && (
+                    <div className="world-messages">
+                        <div className={`message message-${message.type}`}>
+                            {message.text}
+                        </div>
+                    </div>
+                )}
 
                 {/* World Selection Row */}
                 <div className="flex-row">
@@ -265,46 +457,76 @@ export default function App() {
                     </select>
                 </div>
 
-                {/* Create New World Row */}
+                {/* Actions Row */}
                 <div className="flex-row">
-                    <label className="label-wide">Create new:</label>
+                    <label className="label-wide">Actions:</label>
+
+                    {/* Create World */}
                     <input
                         type="text"
                         value={newWorldName}
                         onChange={e => setNewWorldName(e.target.value)}
                         placeholder="World name"
                         className="input-wide"
+                        disabled={isImporting || isExporting || isDeleting}
                     />
-                    <button onClick={handleCreateWorld} className="btn btn-primary">
+                    <button
+                        onClick={handleCreateWorld}
+                        disabled={isImporting || isExporting || isDeleting}
+                        className="btn btn-primary"
+                    >
                         Create World
                     </button>
-                </div>
 
-                {/* World Actions Row */}
-                {selectedWorld && (
-                    <div className="flex-row">
-                        <label className="label-wide">Actions:</label>
-                        <div className="button-group">
-                            <button onClick={() => handleExportWorld()} className="btn btn-success">
-                                Export World
-                            </button>
-                            <button onClick={() => handleDeleteWorld()} className="btn btn-danger">
-                                Delete World
-                            </button>
-                        </div>
-                    </div>
-                )}
 
-                {/* Import Row */}
-                <div className="flex-row world-import">
-                    <label htmlFor="import-world-file" className="label-wide">Import world:</label>
+                    {/* World Operations - only show if world is selected */}
+                    {selectedWorld && (
+                        <>
+                            <span className="divider">|</span>
+                            <button
+                                onClick={handleExportWorld}
+                                disabled={isExporting || isImporting || isDeleting}
+                                className={`btn btn-success ${isExporting ? 'btn-loading' : ''}`}
+                            >
+                                {isExporting ? 'Exporting' : 'Export World'}
+                            </button>
+                            <button
+                                onClick={handleDeleteWorld}
+                                disabled={isDeleting || isImporting || isExporting}
+                                className={`btn btn-danger ${isDeleting ? 'btn-loading' : ''}`}
+                            >
+                                {isDeleting ? 'Deleting' : 'Delete World'}
+                            </button>
+
+                            {/* Add this temporarily after the Delete button */}
+                            {selectedWorld && (
+                                <button
+                                    onClick={testExportImportRoundtrip}
+                                    className="btn"
+                                    style={{ backgroundColor: '#6c757d', color: 'white' }}
+                                >
+                                    Test Roundtrip
+                                </button>
+                            )}
+                        </>
+                    )}
+
+
+                    {/* Import */}
+                    <span className="divider">|</span>
+                    <label className="label-wide">Import World:</label>
+                    {/* Import Section */}
                     <input
                         id="import-world-file"
                         type="file"
                         accept=".json,.rmworld.json"
                         onChange={handleImportWorld}
+                        disabled={isImporting || isExporting || isDeleting}
                         className="input-wide"
+                        title={`Maximum file size: ${formatFileSize(MAX_FILE_SIZE)}`}
                     />
+
+                    {isImporting && <span className="loading-text">Importing...</span>}
                 </div>
             </section>
 
