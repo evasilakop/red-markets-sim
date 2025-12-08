@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { World, City, Sector, SectorType, ActionType, UserAction } from './common/types.ts';
-import { addCity, listCities, getCitySectors, updateSectorsInCity} from './services/worldService.ts';
+import { getCitySectors, updateSectorsInCity} from './services/worldService.ts';
 import WorldManager from './components/WorldManager/WorldManager';
+import CityManager from './components/CityManager/CityManager';
 import {useSimWorker} from "./hooks/useSimWorker.ts";
 import './App.css';
 
@@ -21,17 +22,6 @@ export default function App() {
     // WebWorker states
     const {busy, applyActions, tick} = useSimWorker();
 
-    // Load cities when world changes
-    useEffect(() => {
-        if (selectedWorld) {
-            refreshCities(selectedWorld.id);
-        } else {
-            setCities([]);
-            setSelectedCity(null);
-            setSectors([]);
-        }
-    }, [selectedWorld]);
-
     // Load sectors when city changes
     useEffect(() => {
         if (selectedCity) {
@@ -40,23 +30,6 @@ export default function App() {
             setSectors([]);
         }
     }, [selectedCity]);
-
-    // Helper functions
-
-    /*
-    Why refresh instead of just adding to state?
-        Single source of truth: Database is authoritative
-        Consistency: Ensures UI matches database exactly
-        Simplicity: Same logic for all city list updates
-     */
-    async function refreshCities(worldId: string) {
-        const cs = await listCities(worldId);
-        setCities(cs);
-        // Auto-select first city if none selected
-        if (!selectedCity && cs.length > 0) {
-            setSelectedCity(cs[0]);
-        }
-    }
 
     async function refreshSectors(cityId: string) {
         const ss = await getCitySectors(cityId);
@@ -68,15 +41,6 @@ export default function App() {
                 Event handlers
     ========================================
      */
-
-    const handleAddCity = async () => {
-        if (!selectedWorld) return;
-        const name = prompt('City name:') || 'New City';
-        const {city} = await addCity(selectedWorld.id, name);
-        await refreshCities(selectedWorld.id);
-        setSelectedCity(city); // auto-select the new city
-    };
-
     const handleApplyAction = async (sectorType: SectorType) => {
         if (!selectedCity || busy) return;
 
@@ -151,12 +115,12 @@ export default function App() {
             // Export
             const exportResult = await exportWorld(selectedWorld.id);
             if (!exportResult.success) {
-                console.error('❌ Export failed:', exportResult.error);
+                console.error('Export failed:', exportResult.error);
                 return;
             }
 
-            console.log('✅ Export successful');
-            console.log('📊 Original data:', {
+            console.log('Export successful');
+            console.log('Original data:', {
                 world: originalWorld,
                 cities: originalCities.length,
                 sectors: originalSectors.length
@@ -165,7 +129,7 @@ export default function App() {
             showMessage('success', 'Roundtrip test completed - check console for details');
 
         } catch (error) {
-            console.error('❌ Roundtrip test failed:', error);
+            console.error('Roundtrip test failed:', error);
             showMessage('error', 'Roundtrip test failed - check console');
         }
     };
@@ -209,44 +173,14 @@ export default function App() {
                 selectedWorld={selectedWorld}
                 onWorldSelect={setSelectedWorld}
             />
-
-            {/* City Management */}
-            {selectedWorld && (
-                <section className="section">
-                    <h3>Cities in {selectedWorld.name}</h3>
-
-                    <div className="flex-row">
-                        <button onClick={handleAddCity} className="btn btn-primary">
-                            Add City
-                        </button>
-                    </div>
-
-                    {cities.length > 0 ? (
-                        <div className="flex-row">
-                            <label htmlFor="city-select" className="label">Select city:</label>
-                            <select
-                                id="city-select"
-                                value={selectedCity?.id || ''}
-                                onChange={e => {
-                                    const city = cities.find(c => c.id === e.target.value) || null;
-                                    setSelectedCity(city);
-                                }}
-                                className="input-wide"
-                            >
-                            <option value="">-- Select a city --</option>
-                                {cities.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    ) : (
-                        <p className="city-empty-state">
-                            No cities yet. Add one to get started!
-                        </p>
-                    )}
-                </section>
-            )}
-
+            {/* CityManager component*/}
+            <CityManager
+                selectedWorld={selectedWorld}
+                cities={cities}
+                selectedCity={selectedCity}
+                onCitySelect={setSelectedCity}
+                onCitiesChange={setCities}
+            />
             {/* Sector Display */}
             {selectedCity && sectors.length > 0 && (
                 <section className="sector-display">
