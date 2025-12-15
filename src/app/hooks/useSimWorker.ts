@@ -1,5 +1,11 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import type {Sector, SectorType, UserAction, WorkerRequest, WorkerResponse} from '../common/types.ts';
+import type {
+    Sector,
+    SectorType,
+    UserAction,
+    WorkerRequest,
+    WorkerResponse
+} from '../common/types.ts';
 
 export function useSimWorker() {
     const workerRef = useRef<Worker | null>(null);
@@ -8,7 +14,7 @@ export function useSimWorker() {
     // Create worker on mount, cleanup on unmount
     useEffect(() => {
         const worker = new Worker(
-            new URL('./sim.worker.ts', import.meta.url),
+            new URL('../services/workers/sim.worker.ts', import.meta.url),
             { type: 'module' }
         );
         workerRef.current = worker;

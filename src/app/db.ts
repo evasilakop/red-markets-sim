@@ -1,5 +1,5 @@
-import Dexie, { type Table } from 'dexie';
-import { type World, type City, type Sector } from './common/types.ts';
+import Dexie, {type Table} from 'dexie';
+import {type City, type Sector, type World} from './common/types.ts';
 
 export class RMDB extends Dexie {
     // Declare table properties

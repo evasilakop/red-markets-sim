@@ -1,46 +1,46 @@
-import { useEffect, useState } from 'react';
-import type { World, City, Sector, SectorType, ActionType, UserAction } from './common/types.ts';
-import { getCitySectors, updateSectorsInCity} from './services/worldService.ts';
-import WorldManager from './components/WorldManager/WorldManager';
-import CityManager from './components/CityManager/CityManager';
-import {useSimWorker} from "./hooks/useSimWorker.ts";
-import './App.css';
+import {useEffect} from 'react';
+import type {
+    ActionType,
+    City,
+    Sector,
+    SectorType,
+    UserAction
+} from "../../common/types.ts";
+import {getCitySectors, updateSectorsInCity} from "../../services/worldService.ts";
 
-export default function App() {
-    // State for worlds
-    const [selectedWorld, setSelectedWorld] = useState<World | null>(null);
-    const [selectedAction, setSelectedAction] = useState<ActionType>('MARKET');
-    const [actionMagnitude, setActionMagnitude] = useState<number>(1);
 
-    // State for cities
-    const [cities, setCities] = useState<City[]>([]);
-    const [selectedCity, setSelectedCity] = useState<City | null>(null);
+interface SectorManagerProps{
+    selectedCity: City | null;
+    sectors: Sector[];
+    selectedAction: ActionType;
+    actionMagnitude: number;
+    busy: boolean;
+    onSectorsChange: (sectors: Sector[]) => void;
+    onActionChange: (action: ActionType) => void;
+    onMagnitudeChange: (magnitude: number) => void;
+    applyActions: (sectors: Sector[], actions: Record<SectorType, UserAction[]>) => Promise<Sector[]>;
+    tick: (sectors: Sector[]) => Promise<Sector[]>;
+}
 
-    // State for sectors
-    const [sectors, setSectors] = useState<Sector[]>([]);
 
-    // WebWorker states
-    const {busy, applyActions, tick} = useSimWorker();
+export default function SectorManager({
+                                          selectedCity,
+                                          sectors,
+                                          selectedAction,
+                                          actionMagnitude,
+                                          busy,
+                                          onSectorsChange,
+                                          onActionChange,
+                                          onMagnitudeChange,
+                                          applyActions,
+                                          tick
+                                      }: SectorManagerProps) {
 
-    // Load sectors when city changes
-    useEffect(() => {
-        if (selectedCity) {
-            refreshSectors(selectedCity.id);
-        } else {
-            setSectors([]);
-        }
-    }, [selectedCity]);
-
-    async function refreshSectors(cityId: string) {
+    const refreshSectors = async (cityId: string) => {
         const ss = await getCitySectors(cityId);
-        setSectors(ss);
-    }
+        onSectorsChange(ss);
+    };
 
-    /*
-    ========================================
-                Event handlers
-    ========================================
-     */
     const handleApplyAction = async (sectorType: SectorType) => {
         if (!selectedCity || busy) return;
 
@@ -61,7 +61,7 @@ export default function App() {
             await updateSectorsInCity(selectedCity.id, updatedSectors);
 
             // Update UI
-            setSectors(updatedSectors.sort((a, b) => a.type.localeCompare(b.type)));
+            onSectorsChange(updatedSectors.sort((a, b) => a.type.localeCompare(b.type)));
 
         } catch (error) {
             console.error('Error applying action:', error);
@@ -79,7 +79,7 @@ export default function App() {
             await updateSectorsInCity(selectedCity.id, updatedSectors);
 
             // Update UI
-            setSectors(updatedSectors.sort((a, b) => a.type.localeCompare(b.type)));
+            onSectorsChange(updatedSectors.sort((a, b) => a.type.localeCompare(b.type)));
 
         } catch (error) {
             console.error('Error ticking city:', error);
@@ -87,100 +87,17 @@ export default function App() {
         }
     };
 
-    /*
-    =================================================
-                        Tests
-    =================================================
-     */
-
-    {/*   // Add this test function (you can remove it later or keep it for debugging)
-    const testExportImportRoundtrip = async () => {
-        if (!selectedWorld) {
-            showMessage('error', 'Select a world to test roundtrip');
-            return;
+    // Load sectors when city changes
+    useEffect(() => {
+        if (selectedCity) {
+            refreshSectors(selectedCity.id);
+        } else {
+            onSectorsChange([]);
         }
+    }, [selectedCity, onSectorsChange]);
 
-        console.log('🧪 Testing export → import roundtrip...');
-
-        try {
-            // Get original data
-            const originalWorld = selectedWorld;
-            const originalCities = await listCities(selectedWorld.id);
-            const originalSectors = [];
-            for (const city of originalCities) {
-                const sectors = await getCitySectors(city.id);
-                originalSectors.push(...sectors);
-            }
-
-            // Export
-            const exportResult = await exportWorld(selectedWorld.id);
-            if (!exportResult.success) {
-                console.error('Export failed:', exportResult.error);
-                return;
-            }
-
-            console.log('Export successful');
-            console.log('Original data:', {
-                world: originalWorld,
-                cities: originalCities.length,
-                sectors: originalSectors.length
-            });
-
-            showMessage('success', 'Roundtrip test completed - check console for details');
-
-        } catch (error) {
-            console.error('Roundtrip test failed:', error);
-            showMessage('error', 'Roundtrip test failed - check console');
-        }
-    };
-
-// Add this temporary test function
-    const createLargeTestFile = () => {
-        // Create a large JSON string (about 15MB)
-        const largeData = {
-            version: 1,
-            world: { id: "test", name: "Large World", createdAt: Date.now() },
-            cities: [],
-            sectors: [],
-            // Add lots of fake data to make it large
-            padding: "x".repeat(15 * 1024 * 1024) // 15MB of 'x' characters
-        };
-
-        const blob = new Blob([JSON.stringify(largeData)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'large-test-file.json';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-*/}
-
-
-    /*
-    =================================================
-                        Render
-    =================================================
-     */
     return (
-        <div style={{ padding: 16, fontFamily: 'system-ui, sans-serif' }}>
-            <h1>Red Markets World Simulator</h1>
-            {/*<button onClick={createLargeTestFile} className="btn">Create Large Test File</button>*/}
-            {/* WorldManager component */}
-            <WorldManager
-                selectedWorld={selectedWorld}
-                onWorldSelect={setSelectedWorld}
-            />
-            {/* CityManager component*/}
-            <CityManager
-                selectedWorld={selectedWorld}
-                cities={cities}
-                selectedCity={selectedCity}
-                onCitySelect={setSelectedCity}
-                onCitiesChange={setCities}
-            />
+        <>
             {/* Sector Display */}
             {selectedCity && sectors.length > 0 && (
                 <section className="sector-display">
@@ -193,11 +110,11 @@ export default function App() {
                         <select
                             id="action-select"
                             value={selectedAction}
-                            onChange={e => setSelectedAction(e.target.value as ActionType)}
+                            onChange={e => onActionChange(e.target.value as ActionType)}
                             className="input-wide"
                             disabled={busy}
                         >
-                        <option value="MARKET">Market</option>
+                            <option value="MARKET">Market</option>
                             <option value="INCREASE_DEMAND">Increase Demand</option>
                             <option value="DECREASE_DEMAND">Decrease Demand</option>
                             <option value="PRICE_LOW">Price Low</option>
@@ -216,7 +133,7 @@ export default function App() {
                             min={0}
                             max={10}
                             value={actionMagnitude}
-                            onChange={e => setActionMagnitude(parseInt(e.target.value) || 0)}
+                            onChange={e => onMagnitudeChange(parseInt(e.target.value) || 0)}
                             className="input-narrow"
                             disabled={busy}
                         />
@@ -272,6 +189,6 @@ export default function App() {
                     </table>
                 </section>
             )}
-        </div>
-    );
+        </>
+    )
 }

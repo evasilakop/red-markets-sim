@@ -1,4 +1,4 @@
-import type { World, City, Sector } from '../../common/types';
+import type {City, Sector, World} from '../common/types.ts';
 
 /**
  * Structure of a world bundle file used for import/export operations.

@@ -1,7 +1,6 @@
-// Load cities when world changes
-import {useEffect} from "react";
-import {addCity, listCities} from "../../services/worldService.ts";
-import type {World, City} from "../../common/types.ts";
+import {useEffect} from 'react';
+import {addCity, listCities, removeCity} from "../../services/worldService.ts";
+import type {City, World} from "../../common/types.ts";
 
 interface CityManagerProps {
     selectedWorld: World | null;
@@ -31,7 +30,7 @@ export default function CityManager({
        =====================================================================
                                  Helper functions
        =====================================================================
-        */
+    */
 
     /*
     Why refresh instead of just adding to state?
@@ -67,6 +66,28 @@ export default function CityManager({
         onCitySelect(city); // ← Tell App about selection change
     };
 
+    const handleRemoveCity = async () => {
+        if (!selectedCity || !selectedWorld) return; //check if we also have a world
+        // selected
+
+        const confirmed = confirm(`Delete city "${selectedCity.name}"? This will remove all sectors. This cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            const result = await removeCity(selectedCity.id);
+            if (result.success) {
+                console.log(result.message);
+                onCitySelect(null); // Clear selection since city is deleted
+                await refreshCities(selectedWorld.id); // Refresh the city list
+            } else {
+                console.error(result.error);
+                alert(result.error);
+            }
+        } catch (error) {
+            console.error('Delete failed:', error);
+            alert('Delete failed. Check console for details.');
+        }
+    };
 
     return (
         <>
@@ -78,6 +99,11 @@ export default function CityManager({
                         <button onClick={handleAddCity} className="btn btn-primary">
                             Add City
                         </button>
+                        {selectedCity && (
+                            <button onClick={handleRemoveCity} className="btn btn-danger">
+                                Remove City
+                            </button>
+                        )}
                     </div>
 
                     {cities.length > 0 ? (

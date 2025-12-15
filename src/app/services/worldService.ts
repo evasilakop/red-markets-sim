@@ -1,7 +1,16 @@
-import { db } from '../db.ts';
-import { ALL_SECTORS, type World, type City, type Sector, type OperationResult } from '../common/types.ts';
-import { deriveEquilibrium, chipsFor, competitionDiceFor } from '../sim.ts';
-import {validateWorldBundle, type WorldBundle} from '../components/WorldManager/validation.ts';
+import {db} from '../db.ts';
+import {
+    ALL_SECTORS,
+    type City,
+    type OperationResult,
+    type Sector,
+    type World
+} from '../common/types.ts';
+import {chipsFor, competitionDiceFor, deriveEquilibrium} from '../sim.ts';
+import {
+    validateWorldBundle,
+    type WorldBundle
+} from './validation.ts';
 
 
 // Generate UUID v4
@@ -66,6 +75,31 @@ export async function listCities(worldId: string): Promise<City[]> {
     return cities;
 }
 
+export async function removeCity(cityId: string): Promise<OperationResult> {
+    const city = await db.cities.get(cityId);
+    if (!city) {
+        return {
+            success: false,
+            error: 'City not found',
+        };
+    }
+
+    const cityName = city.name;
+
+    // Delete everything in a transaction (sectors first, then city)
+    await db.transaction('rw', db.sectors, db.cities, async () => {
+        // Delete all sectors in this city
+        await db.sectors.where({ cityId }).delete();
+
+        // Delete the city itself
+        await db.cities.delete(cityId);
+    });
+
+    return {
+        success: true,
+        message: `City "${cityName}" deleted successfully`
+    };
+}
 
 export async function getCitySectors(cityId: string): Promise<Sector[]> {
     const sectors = await db.sectors.where({ cityId }).toArray();
