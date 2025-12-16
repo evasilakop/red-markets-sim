@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { deriveEquilibrium, chipsFor, competitionDiceFor } from '../main/sim';
+import {describe, expect, it} from 'vitest';
+import {chipsFor, competitionDiceFor, deriveEquilibrium} from '../app/sim';
 
 describe('deriveEquilibrium', () => {
     it('FLOODED when high supply, low demand', () => {

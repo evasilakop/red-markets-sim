@@ -1,5 +1,4 @@
-import type {Equilibrium} from './common/types.ts';
-import type { Sector, UserAction } from './common/types.ts';
+import type {Equilibrium, Sector, UserAction} from './common/types.ts';
 
 export function deriveEquilibrium(supply: number, demand: number, prev?: Equilibrium): Equilibrium {
     const s = supply / 100, d = demand / 100;
