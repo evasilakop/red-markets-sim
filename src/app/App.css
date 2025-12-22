@@ -136,6 +136,24 @@
     opacity: 0.6;
 }
 
+/* ===== UI SECTIONS ====== */
+/* flexbox */
+.main-container {
+    display: flex;
+    height: 100vh;
+}
+.sidebar {
+    width: 280px;
+    min-width: 220px;
+    border-right: 1px solid #e0e0e0;
+    background: #fafbfc;
+}
+.detail-panel {
+    flex: 1;
+    padding: 32px;
+    overflow-y: auto;
+}
+
 /* ===== SPECIFIC SECTIONS ===== */
 
 /* World Management */
@@ -143,14 +161,6 @@
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid #eee;
-}
-
-/* City Management */
-.city-empty-state {
-    color: #666;
-    font-style: italic;
-    margin: 0;
-    padding: 8px 0;
 }
 
 /* Sector Display */
