@@ -6,7 +6,8 @@ export default defineConfig({
             'src/tests/**/*.test.ts',
             'src/tests/**/*.test.tsx'
         ],
-        environment: 'node', // switch to 'jsdom' for React component tests
+        environment: 'jsdom', // switch to 'jsdom' for React component tests, 'node'
+        // is default
         globals: true,
     },
 });

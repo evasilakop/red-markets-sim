@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {type World} from '../../common/types';
+import {useMessages} from "../../hooks/useMessages.ts";
 import {
     createWorld,
     deleteWorld,
@@ -13,22 +14,32 @@ import {
     MAX_FILE_SIZE,
     SUPPORTED_FILE_TYPES
 } from "../../services/validation.ts";
+import MessageDisplay from "../MessageDisplay/MessageDisplay.tsx";
 
+/**
+ * Props for the WorldManager component.
+ */
 interface WorldManagerProps {
+    /** The currently selected world, or null if none selected */
     selectedWorld: World | null;
+    /** Callback invoked when user selects a different world */
     onWorldSelect: (world: World | null) => void;
 }
 
-export default function WorldManager({ selectedWorld, onWorldSelect }: WorldManagerProps) {
+/**
+ * React component for managing world operations including creation, selection,
+ * import, export, and deletion. Displays user feedback messages and handles
+ * file validation for world import/export operations.
+ * @param props Component props
+ * @returns The rendered WorldManager component
+ */
+export default function WorldManager({selectedWorld, onWorldSelect}: WorldManagerProps) {
     const [worlds, setWorlds] = useState<World[]>([]);
     const [newWorldName, setNewWorldName] = useState('My World');
     const [isImporting, setIsImporting] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [message, setMessage] = useState<{
-        type: 'success' | 'error' | 'warning';
-        text: string;
-    } | null>(null);
+    const {showSuccess, showError, showWarning} = useMessages('world');
 
     // Load worlds on mount
     useEffect(() => {
@@ -39,9 +50,7 @@ export default function WorldManager({ selectedWorld, onWorldSelect }: WorldMana
     useEffect(() => {
         const browserCheck = checkBrowserSupport();
         if (!browserCheck.supported) {
-            showMessage('error',
-                `Your browser doesn't support required features: ${browserCheck.missingFeatures.join(', ')}. Please use a modern browser.`
-            );
+            showError(`Your browser doesn't support required features: ${browserCheck.missingFeatures.join(', ',)}. Please use a modern browser.`);
         }
     }, []);
 
@@ -50,11 +59,11 @@ export default function WorldManager({ selectedWorld, onWorldSelect }: WorldMana
                               Helper functions
     =====================================================================
      */
-    const showMessage = (type: 'success' | 'error' | 'warning', text: string) => {
-        setMessage({ type, text });
-        setTimeout(() => setMessage(null), 5000);
-    };
 
+    /**
+     * Refreshes the list of worlds from the database and auto-selects the first
+     * world if none is currently selected.
+     */
     const refreshWorlds = async () => {
         const ws = await listWorlds();
         setWorlds(ws);
@@ -69,6 +78,10 @@ export default function WorldManager({ selectedWorld, onWorldSelect }: WorldMana
                               Event handlers
     =====================================================================
      */
+
+    /**
+     * Creates a new world with the specified name and refreshes the world list.
+     */
     const handleCreateWorld = async () => {
         const world = await createWorld(newWorldName || 'World');
         await refreshWorlds();
@@ -76,58 +89,81 @@ export default function WorldManager({ selectedWorld, onWorldSelect }: WorldMana
         setNewWorldName('My World');
     };
 
+    /**
+     * Handles world selection change from the dropdown.
+     * @param worldId The ID of the selected world
+     */
     const handleWorldChange = (worldId: string) => {
         const world = worlds.find(w => w.id === worldId) || null;
         onWorldSelect(world);
+        showSuccess('World updated!');
     };
 
+    /**
+     * Exports the currently selected world to a downloadable JSON file.
+     * Handles loading states and displays appropriate success/error messages.
+     */
     const handleExportWorld = async () => {
         if (!selectedWorld || isExporting) return;
 
         setIsExporting(true);
-        setMessage(null);
-
         try {
             const result = await exportWorld(selectedWorld.id);
             if (result.success) {
-                showMessage('success', result.message || 'World exported successfully');
+                showSuccess('World exported successfully');
             } else {
-                showMessage('error', result.error || 'Export failed');
+                // service worked but the operation failed
+                showError(result.error || 'Download failed');
             }
         } catch (error) {
+            // service itself failed
             console.error('Export failed:', error);
-            showMessage('error', 'Export failed. Please try again.');
+            showError('Export failed. Please try again.');
         } finally {
             setIsExporting(false);
         }
     };
 
+    /**
+     * Deletes the currently selected world after user confirmation.
+     * Removes all associated cities and sectors. Shows confirmation dialog
+     * and handles loading states with user feedback.
+     */
     const handleDeleteWorld = async () => {
         if (!selectedWorld || isDeleting) return;
 
+        // Still need the confirmation dialog for now
         const confirmed = confirm(`Delete world "${selectedWorld.name}"? This will remove all cities and sectors. This cannot be undone.`);
         if (!confirmed) return;
 
         setIsDeleting(true);
-        setMessage(null);
+        // Clear any existing messages before starting
 
         try {
             const result = await deleteWorld(selectedWorld.id);
+
             if (result.success) {
-                showMessage('success', result.message || 'World deleted successfully');
+                // Show success message
+                showSuccess(result.message || 'World deleted successfully');
                 onWorldSelect(null); // Tell parent to clear selection
                 await refreshWorlds();
             } else {
-                showMessage('error', result.error || 'Delete failed');
+                showError(result.error || 'Delete failed');
             }
         } catch (error) {
             console.error('Delete failed:', error);
-            showMessage('error', 'Delete failed. Please try again.');
+            showError('Delete failed. Please try again.');
         } finally {
             setIsDeleting(false);
         }
     };
 
+    /**
+     * Handles world import from a selected file with comprehensive validation.
+     * Validates browser support, file size, file type, and file structure.
+     * Displays appropriate feedback messages for all validation and import states.
+     * @param e File input change event containing the selected file
+     */
     const handleImportWorld = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || isImporting) return;
@@ -135,63 +171,57 @@ export default function WorldManager({ selectedWorld, onWorldSelect }: WorldMana
         // Check browser support first
         const browserCheck = checkBrowserSupport();
         if (!browserCheck.supported) {
-            showMessage('error', `Browser not supported. Missing: ${browserCheck.missingFeatures.join(', ')}`);
+            showError(`Browser not supported. Missing: ${browserCheck.missingFeatures.join(', ')}`);
             e.target.value = '';
             return;
         }
 
         // Check file size
         if (file.size > MAX_FILE_SIZE) {
-            showMessage('error',
-                `File too large (${formatFileSize(file.size)}). Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`
-            );
+            showError(`File too large (${formatFileSize(file.size)}). Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`);
             e.target.value = '';
             return;
         }
 
         // Check file type (basic check - we'll do more validation after reading)
-        if (!SUPPORTED_FILE_TYPES.includes(file.type) && !file.name.endsWith('.json') && !file.name.endsWith('.rmworld.json')) {
-            showMessage('warning', 'Unexpected file type. Expected .json or .rmworld.json file.');
+        if (!SUPPORTED_FILE_TYPES.includes(file.type) && !file.name.endsWith('.json')
+            && !file.name.endsWith('.rmworld.json')) {
+            showWarning('Unexpected file type. Expected .json or .rmworld.json' + ' file.');
             // Don't return here - let them try anyway, our validation will catch issues
         }
 
         setIsImporting(true);
-        setMessage(null);
 
         try {
             const result = await importWorld(file);
             if (result.success) {
-                showMessage('success', `World "${result.worldName}" imported successfully`);
+                showSuccess(`World "${result.worldName}" imported successfully`);
                 await refreshWorlds();
                 const importedWorld = worlds.find(w => w.name === result.worldName);
                 if (importedWorld) {
                     onWorldSelect(importedWorld);
                 }
             } else {
-                showMessage('error', result.error || 'Import failed');
+                showError(result.error || 'Import failed');
             }
         } catch (error) {
             console.error('Import failed:', error);
-            showMessage('error', 'Import failed. Please try again.');
+            showError('Import failed. Please try again.');
         } finally {
             setIsImporting(false);
             e.target.value = '';
         }
     };
 
+    /*
+    =====================================================================
+                                    Render
+    =====================================================================
+    */
     return (
         <section className="section">
             <h3>World Management</h3>
-
-            {/* Message Display */}
-            {message && (
-                <div className="world-messages">
-                    <div className={`message message-${message.type}`}>
-                        {message.text}
-                    </div>
-                </div>
-            )}
-
+            <MessageDisplay scope="world"/>
             {/* World Selection Row */}
             <div className="flex-row">
                 <label htmlFor="world-select" className="label-wide">World:</label>
@@ -252,7 +282,7 @@ export default function WorldManager({ selectedWorld, onWorldSelect }: WorldMana
                         </button>
                     </>
                 ) : (
-                    <span style={{ color: '#999', fontStyle: 'italic' }}>Select a world first</span>
+                    <span style={{color: '#999', fontStyle: 'italic'}}>Select a world first</span>
                 )}
 
                 <span className="divider">|</span>

@@ -7,10 +7,7 @@ import {
     type World
 } from '../common/types.ts';
 import {chipsFor, competitionDiceFor, deriveEquilibrium} from '../sim.ts';
-import {
-    validateWorldBundle,
-    type WorldBundle
-} from './validation.ts';
+import {validateWorldBundle, type WorldBundle} from './validation.ts';
 
 
 // Generate UUID v4
@@ -71,7 +68,7 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
 
 export async function listCities(worldId: string): Promise<City[]> {
     const cities = await db.cities.where({ worldId }).toArray();
-    cities.sort((a, b) => a.name.localeCompare(b.name));
+    cities.sort((a, b) => a.name.localeCompare(b.name)); //sort alphabetically
     return cities;
 }
 
