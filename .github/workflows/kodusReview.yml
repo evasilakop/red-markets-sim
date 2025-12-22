@@ -1,0 +1,31 @@
+name: Kodus AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    # 'opened' triggers when you create the PR
+    # 'synchronize' triggers when you push new commits to an existing PR
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  kodus-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Kodus AI Reviewer
+        uses: kodus-ai/reviewer-action@v1
+        with:
+          # You usually don't need a token if you installed the GitHub App, 
+          # but if you are using the Action directly, you might need your OpenAI key 
+          # or the Kodus API key depending on their specific version.
+          # For the standard integration, the GITHUB_TOKEN is often enough.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Optional: Customize the review style
+          # model: "gpt-4" (if supported by your plan)
+          # language: "en"
