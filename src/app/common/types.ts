@@ -1,13 +1,32 @@
+/*
+================================================
+            Business Logic Types
+================================================
+ */
+
 export type SectorType =
-    | 'FOOD & WATER' | 'SHELTER'
-    | 'MATERIAL' | 'PRODUCTS'
-    | 'ENERGY' | 'MEDICINE'
-    | 'SPECULATIVE' | 'TRANSPORTATION'
-    | 'DATA' | 'HR';
+    | 'FOOD & WATER'
+    | 'SHELTER'
+    | 'MATERIAL'
+    | 'PRODUCTS'
+    | 'ENERGY'
+    | 'MEDICINE'
+    | 'SPECULATIVE'
+    | 'TRANSPORTATION'
+    | 'DATA'
+    | 'HR';
 
 export const ALL_SECTORS: SectorType[] = [
-    'FOOD & WATER','SHELTER','MATERIAL','PRODUCTS','ENERGY',
-    'MEDICINE','SPECULATIVE','TRANSPORTATION','DATA','HR'
+    'FOOD & WATER',
+    'SHELTER',
+    'MATERIAL',
+    'PRODUCTS',
+    'ENERGY',
+    'MEDICINE',
+    'SPECULATIVE',
+    'TRANSPORTATION',
+    'DATA',
+    'HR'
 ];
 
 export type Equilibrium = 'FLOODED' | 'VOLATILE' | 'SUBSIDIARY' | 'SCARCE';
@@ -36,16 +55,21 @@ export interface Sector {
     equilibrium: Equilibrium;
     startingChips: number;
     competitionUndercutDice: number;
-    priceIndex?: number | null; // user-owned; display-only
+    priceIndex?: number | null;         // user-owned; display-only
     updatedAt: number;
 }
 
 export type ActionType =
-    | 'INCREASE_SUPPLY' | 'SUBCONTRACT'
-    | 'REDUCE_SUPPLY' | 'RESTRICT_FLOW'
-    | 'SABOTAGE' | 'INCREASE_DEMAND'
-    | 'MARKET' | 'PRICE_LOW'
-    | 'DECREASE_DEMAND' | 'SPECULATE';
+    | 'INCREASE_SUPPLY'
+    | 'SUBCONTRACT'
+    | 'REDUCE_SUPPLY'
+    | 'RESTRICT_FLOW'
+    | 'SABOTAGE'
+    | 'INCREASE_DEMAND'
+    | 'MARKET'
+    | 'PRICE_LOW'
+    | 'DECREASE_DEMAND'
+    | 'SPECULATE';
 
 export interface UserAction {
     sector: SectorType;
@@ -53,7 +77,12 @@ export interface UserAction {
     magnitude: number; // 0-10
 }
 
-// Worker message types
+/*
+=======================================================
+                 Worker message types
+=======================================================
+ */
+
 export type ApplyActionsMsg = {
     type: 'applyActions';
     sectors: Sector[];
@@ -84,3 +113,15 @@ export type OperationResult = {
     message?: string;
     error?: string;
 };
+
+/*
+====================================================
+                     Message utils
+====================================================
+ */
+
+export type MessageScope = 'world' | 'city' | 'sector' | 'settings';
+export const ALL_MESSAGE_SCOPES: MessageScope[] = ['world', 'city', 'sector'];
+
+export type MessageType = 'success' | 'warning' | 'error';
+export const ALL_MESSAGE_TYPES: MessageType[] = ['success', 'warning', 'error'];

@@ -7,22 +7,43 @@ import type {
     UserAction
 } from "../../common/types.ts";
 import {getCitySectors, updateSectorsInCity} from "../../services/worldService.ts";
+import {useMessages} from "../../hooks/useMessages.ts";
+import MessageDisplay from "../MessageDisplay/MessageDisplay.tsx";
 
 
-interface SectorManagerProps{
+/**
+ * Props for the Sector Manager component
+ */
+interface SectorManagerProps {
+    /* The currently selected city */
     selectedCity: City | null;
+    /* List of sectors for the selected city */
     sectors: Sector[];
+    /* The currently selected action to apply to a sector */
     selectedAction: ActionType;
+    /* Magnitude of the selected actions */
     actionMagnitude: number;
+    /* Whether a background operation (worker) is currently running */
     busy: boolean;
+    /* Callback invoked when the sectors list changes (e.g., after apply/tick/refresh) */
     onSectorsChange: (sectors: Sector[]) => void;
+    /* Callback invoked when the selected action changes */
     onActionChange: (action: ActionType) => void;
+    /* Callback invoked when the action magnitude changes */
     onMagnitudeChange: (magnitude: number) => void;
+    /* Applies user actions via worker and returns updated sectors */
     applyActions: (sectors: Sector[], actions: Record<SectorType, UserAction[]>) => Promise<Sector[]>;
+    /* Advances simulation (tick) via worker and returns updated sectors */
     tick: (sectors: Sector[]) => Promise<Sector[]>;
 }
 
-
+/**
+ * React component for managing sector operations within the selected city.
+ * Loads sectors when the city changes, applies actions via a web worker,
+ * persist updates to the database, and provides user feedback for errors.
+ * @param props Component props
+ * @returns The rendered SectorManager component
+ */
 export default function SectorManager({
                                           selectedCity,
                                           sectors,
@@ -35,12 +56,38 @@ export default function SectorManager({
                                           applyActions,
                                           tick
                                       }: SectorManagerProps) {
+    const {showError} = useMessages('sector');
 
+    // Load sectors when city changes
+    useEffect(() => {
+        if (selectedCity) {
+            refreshSectors(selectedCity.id);
+        } else {
+            onSectorsChange([]);
+        }
+    }, [selectedCity, onSectorsChange]);
+
+    /*
+    ====================================================
+                Event handlers
+    ====================================================
+     */
+
+    /**
+     * Loads sectors for the given city and updates parent state.
+     * @param cityId The ID of the city whose sectors should be loaded
+     */
     const refreshSectors = async (cityId: string) => {
         const ss = await getCitySectors(cityId);
         onSectorsChange(ss);
     };
 
+    /**
+     * Applies the selected action to a single sector type using the worker,
+     * persists the updated sectors to the database, and updates parent state.
+     * Displays an error message on failure.
+     * @param sectorType The sector type to which the action should be applied
+     */
     const handleApplyAction = async (sectorType: SectorType) => {
         if (!selectedCity || busy) return;
 
@@ -65,10 +112,15 @@ export default function SectorManager({
 
         } catch (error) {
             console.error('Error applying action:', error);
-            alert('Error applying action. Check console for details.');
+            showError('Error applying action. Check console for details.');
         }
     };
 
+    /**
+     * Advances the simulation (tick) for the current city using the worker,
+     * persists the updated sectors to the database, and updates parent state.
+     * Displays an error message on failure.
+     */
     const handleTickCity = async () => {
         if (!selectedCity || busy) return;
         try {
@@ -83,26 +135,22 @@ export default function SectorManager({
 
         } catch (error) {
             console.error('Error ticking city:', error);
-            alert('Error advancing time. Check console for details.');
+            showError('Error advancing time. Check console for details.');
         }
     };
 
-    // Load sectors when city changes
-    useEffect(() => {
-        if (selectedCity) {
-            refreshSectors(selectedCity.id);
-        } else {
-            onSectorsChange([]);
-        }
-    }, [selectedCity, onSectorsChange]);
-
+    /*
+    =====================================================================
+                                    Render
+    =====================================================================
+    */
     return (
         <>
             {/* Sector Display */}
             {selectedCity && sectors.length > 0 && (
                 <section className="sector-display">
                     <h3>Sectors in {selectedCity.name}</h3>
-
+                    <MessageDisplay scope="sector"/>
                     {/* Action Controls */}
                     <div className="flex-row action-controls">
                         <label className="label">Action:</label>
@@ -126,7 +174,8 @@ export default function SectorManager({
                             <option value="SABOTAGE">Sabotage</option>
                         </select>
 
-                        <label htmlFor="action-magnitude" className="label">Magnitude:</label>
+                        <label htmlFor="action-magnitude"
+                               className="label">Magnitude:</label>
                         <input
                             id="action-magnitude"
                             type="number"
