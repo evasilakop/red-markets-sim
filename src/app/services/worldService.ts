@@ -1,4 +1,4 @@
-import {db} from '../db.ts';
+import {db} from './db.ts';
 import {
     ALL_SECTORS,
     type City,
@@ -6,7 +6,7 @@ import {
     type Sector,
     type World
 } from '../common/types.ts';
-import {chipsFor, competitionDiceFor, deriveEquilibrium} from '../sim.ts';
+import {chipsFor, competitionDiceFor, deriveEquilibrium} from './sim.ts';
 import {validateWorldBundle, type WorldBundle} from './validation.ts';
 
 

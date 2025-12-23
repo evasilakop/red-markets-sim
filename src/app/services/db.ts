@@ -1,5 +1,5 @@
 import Dexie, {type Table} from 'dexie';
-import {type City, type Sector, type World} from './common/types.ts';
+import {type City, type Sector, type World} from '../common/types.ts';
 
 export class RMDB extends Dexie {
     // Declare table properties
@@ -21,3 +21,4 @@ export class RMDB extends Dexie {
 
 // Export single instance to use throughout the app
 export const db = new RMDB();
+(window as any).db = db;

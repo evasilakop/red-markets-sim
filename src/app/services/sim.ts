@@ -1,4 +1,4 @@
-import type {Equilibrium, Sector, UserAction} from './common/types.ts';
+import type {Equilibrium, Sector, UserAction} from '../common/types.ts';
 
 export function deriveEquilibrium(supply: number, demand: number, prev?: Equilibrium): Equilibrium {
     const s = supply / 100, d = demand / 100;
@@ -12,9 +12,11 @@ export function deriveEquilibrium(supply: number, demand: number, prev?: Equilib
     if (diff < -0.1) return 'SCARCE';
     return prev ?? ((s + d) / 2 >= 0.5 ? 'VOLATILE' : 'SUBSIDIARY');
 }
+
 export function chipsFor(eq: Equilibrium) {
     return eq === 'FLOODED' ? 2 : eq === 'VOLATILE' ? 0 : eq === 'SUBSIDIARY' ? 3 : 1;
 }
+
 export function competitionDiceFor(eq: Equilibrium) {
     return eq === 'FLOODED' ? -2 : eq === 'VOLATILE' ? 0 : eq === 'SUBSIDIARY' ? -3 : -1;
 }

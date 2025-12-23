@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useCallback} from 'react';
 import {addCity, listCities, removeCity} from "../../services/worldService.ts";
 import type {City, World} from "../../common/types.ts";
 import {useMessages} from "../../hooks/useMessages.ts";
@@ -41,49 +41,42 @@ export default function CityManager({
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Memoize refreshCities so it doesn't break useEffect dependencies
+    const refreshCities = useCallback(async (worldId: string, isActive: boolean) => {
+        try {
+            const cs = await listCities(worldId);
+            // CRITICAL: Only update state if this request is still "active"
+            if (isActive) {
+                onCitiesChange(cs);
+                // Only auto-select if we don't have a valid selection
+                if (!selectedCity && cs.length > 0) {
+                    onCitySelect(cs[0]);
+                }
+            }
+        } catch (error) {
+            if (isActive) {
+                console.error("Failed to load cities", error);
+                showError("Failed to load cities");
+            }
+        }
+    }, [onCitiesChange, onCitySelect, selectedCity, showError]);
+
+    // Handle World Changes safely
     useEffect(() => {
+        let active = true; // Flag to track if this effect is still valid
+
         if (selectedWorld) {
-            refreshCities(selectedWorld.id);
+            refreshCities(selectedWorld.id, active);
         } else {
             onCitiesChange([]);
             onCitySelect(null);
         }
-    }, [selectedWorld]);
 
-    /*
-       =====================================================================
-                                 Helper functions
-       =====================================================================
-    */
-
-    /**
-     * Loads cities for the given world and updates parent state.
-     * Auto-selects the first city if none is currently selected.
-     * @param worldId The ID of the world whose cities should be loaded
-     * <p/>
-     * <p>Why refresh instead of just adding to state? </p>
-     * <p>   Single source of truth: Database is authoritative </p>
-     * <p>   Consistency: Ensures UI matches database exactly </p>
-     * <p>   Simplicity: Same logic for all city list updates</p>
-     */
-    async function refreshCities(worldId: string) {
-        try {
-            const cs = await listCities(worldId);
-            onCitiesChange(cs);
-            if (!selectedCity && cs.length > 0) {
-                onCitySelect(cs[0]);
-            }
-        } catch (error) {
-            console.error("Failed to load cities", error);
-            showError("Failed to load cities");
-        }
-    }
-
-    /*
-       =====================================================================
-                                 Event Handlers
-       =====================================================================
-     */
+        // Cleanup function runs when selectedWorld changes or component unmounts
+        return () => {
+            active = false;
+        };
+    }, [selectedWorld, refreshCities]); // Proper dependencies
 
     /**
      * Creates a new city in the currently selected world and updates the list.
@@ -92,9 +85,14 @@ export default function CityManager({
     const handleAddCity = async () => {
         if (!selectedWorld) return;
         const name = prompt('City name:') || 'New City';
-        const {city} = await addCity(selectedWorld.id, name);
-        await refreshCities(selectedWorld.id);
-        onCitySelect(city);
+        try {
+            const {city} = await addCity(selectedWorld.id, name);
+            // We pass 'true' because we know we want this update
+            await refreshCities(selectedWorld.id, true);
+            onCitySelect(city);
+        } catch (e) {
+            showError("Could not create city");
+        }
     };
 
     const handleRemoveCity = () => {
@@ -102,7 +100,7 @@ export default function CityManager({
         setShowConfirm(true);
     };
 
-    const confirmDelete = async () => {
+    const confirmDeleteCity = async () => {
         if (!selectedCity || !selectedWorld) return;
         setShowConfirm(false);
         setIsDeleting(true);
@@ -110,23 +108,22 @@ export default function CityManager({
         try {
             const result = await removeCity(selectedCity.id);
             if (result.success) {
-                console.log(result.message);
+                showSuccess(result.message || 'City deleted!');
                 onCitySelect(null);
-                await refreshCities(selectedWorld.id);
-                showSuccess('City deleted!');
+                await refreshCities(selectedWorld.id, true);
             } else {
                 console.error(result.error);
                 showError(result.error?.toString() as string);
             }
         } catch (error) {
-            console.error('Delete failed:', error);
-            showError('Delete failed. Check console for details.');
+            console.error('Delete city failed:', error);
+            showError('Delete city failed. Check console for details.');
         } finally {
             setIsDeleting(false);
         }
     };
 
-    const cancelDelete = () => {
+    const cancelDeleteCity = () => {
         setShowConfirm(false);
     };
 
@@ -146,7 +143,7 @@ export default function CityManager({
                                 className="btn btn-danger"
                                 disabled={isDeleting}
                             >
-                                {isDeleting ? 'Deleting...' : 'Remove City'} {/* Added loading text */}
+                                {isDeleting ? 'Deleting...' : 'Remove City'}
                             </button>
                         )}
                     </div>
@@ -172,15 +169,13 @@ export default function CityManager({
                     )}
                 </section>
             )}
-
-            {/* Fixed: use showConfirm instead of showDeleteConfirm */}
             {showConfirm && selectedCity && (
                 <ConfirmationDialog
                     message={`Delete city "${selectedCity.name}"? This will remove all sectors. This cannot be undone.`}
                     confirmLabel="Delete"
                     cancelLabel="Cancel"
-                    onConfirm={confirmDelete}
-                    onCancel={cancelDelete}
+                    onConfirm={confirmDeleteCity}
+                    onCancel={cancelDeleteCity}
                 />
             )}
         </>

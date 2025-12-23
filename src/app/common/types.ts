@@ -94,7 +94,7 @@ export type TickMsg = {
     sectors: Sector[];
 };
 
-export type WorkerRequest = ApplyActionsMsg | TickMsg;
+export type WorkerRequest = (ApplyActionsMsg | TickMsg) & {id: string};
 
 export type ResultMsg = {
     type: 'result';
@@ -106,7 +106,7 @@ export type ErrorMsg = {
     message: string;
 };
 
-export type WorkerResponse = ResultMsg | ErrorMsg;
+export type WorkerResponse = (ResultMsg | ErrorMsg) & {id: string};
 
 export type OperationResult = {
     success: boolean;

@@ -6,6 +6,7 @@ import CityManager from './components/CityManager/CityManager';
 import SectorManager from "./components/SectorManager/SectorManager.tsx";
 import {useSimWorker} from "./hooks/useSimWorker.ts";
 import './App.css';
+import CityDataDebug from "./components/CityDashboard/CityDataDebug.tsx";
 
 export default function App() {
     // State for worlds
@@ -129,6 +130,7 @@ export default function App() {
                 onCitySelect={setSelectedCity}
                 onCitiesChange={setCities}
             />
+            {selectedCity && <CityDataDebug cityId={selectedCity.id} />}
             {/*SectorManager component*/}
             <SectorManager
                 selectedCity={selectedCity}
