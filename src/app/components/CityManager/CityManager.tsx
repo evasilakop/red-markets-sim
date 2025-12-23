@@ -1,8 +1,10 @@
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {addCity, listCities, removeCity} from "../../services/worldService.ts";
 import type {City, World} from "../../common/types.ts";
 import {useMessages} from "../../hooks/useMessages.ts";
 import MessageDisplay from "../MessageDisplay/MessageDisplay.tsx";
+import ConfirmationDialog from "../../common/ConfirmationDialog.tsx";
+import './CityManager.css';
 
 /**
  * Props for the CityManager component.
@@ -36,6 +38,8 @@ export default function CityManager({
                                     onCitiesChange
                                     }: CityManagerProps) {
     const {showSuccess, showError} = useMessages('city');
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         if (selectedWorld) {
@@ -63,11 +67,15 @@ export default function CityManager({
      * <p>   Simplicity: Same logic for all city list updates</p>
      */
     async function refreshCities(worldId: string) {
-        const cs = await listCities(worldId);
-        onCitiesChange(cs); //tell App about new cities
-        // Auto-select first city if none selected
-        if (!selectedCity && cs.length > 0) {
-            onCitySelect(cs[0]); //tell App to select city
+        try {
+            const cs = await listCities(worldId);
+            onCitiesChange(cs);
+            if (!selectedCity && cs.length > 0) {
+                onCitySelect(cs[0]);
+            }
+        } catch (error) {
+            console.error("Failed to load cities", error);
+            showError("Failed to load cities");
         }
     }
 
@@ -86,35 +94,25 @@ export default function CityManager({
         const name = prompt('City name:') || 'New City';
         const {city} = await addCity(selectedWorld.id, name);
         await refreshCities(selectedWorld.id);
-        onCitySelect(city); // auto-select the new city
+        onCitySelect(city);
     };
 
-    /**
-     * Handles user selection of a city from the dropdown.
-     * @param cityId The ID of the city selected by the user
-     */
-    const handleCityChange = (cityId: string) => {
-        const city = cities.find(c => c.id === cityId) || null;
-        onCitySelect(city); // ← Tell App about selection change
+    const handleRemoveCity = () => {
+        if (!selectedCity || !selectedWorld) return;
+        setShowConfirm(true);
     };
 
-    /**
-     * Removes the currently selected city (after confirmation), clears selection,
-     * and refreshes the city list. Displays success or error messages as needed.
-     */
-    const handleRemoveCity = async () => {
-        if (!selectedCity || !selectedWorld) return; //check if we also have a world
-        // selected
-
-        const confirmed = confirm(`Delete city "${selectedCity.name}"? This will remove all sectors. This cannot be undone.`);
-        if (!confirmed) return;
+    const confirmDelete = async () => {
+        if (!selectedCity || !selectedWorld) return;
+        setShowConfirm(false);
+        setIsDeleting(true);
 
         try {
             const result = await removeCity(selectedCity.id);
             if (result.success) {
                 console.log(result.message);
-                onCitySelect(null);                 // Clear selection since city is deleted
-                await refreshCities(selectedWorld.id);   // Refresh the city list
+                onCitySelect(null);
+                await refreshCities(selectedWorld.id);
                 showSuccess('City deleted!');
             } else {
                 console.error(result.error);
@@ -123,14 +121,15 @@ export default function CityManager({
         } catch (error) {
             console.error('Delete failed:', error);
             showError('Delete failed. Check console for details.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
-    /*
-        =====================================================================
-                                        Render
-        =====================================================================
-     */
+    const cancelDelete = () => {
+        setShowConfirm(false);
+    };
+
     return (
         <>
             {selectedWorld && (
@@ -142,27 +141,29 @@ export default function CityManager({
                             Add City
                         </button>
                         {selectedCity && (
-                            <button onClick={handleRemoveCity} className="btn btn-danger">
-                                Remove City
+                            <button
+                                onClick={handleRemoveCity}
+                                className="btn btn-danger"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? 'Deleting...' : 'Remove City'} {/* Added loading text */}
                             </button>
                         )}
                     </div>
 
                     {cities.length > 0 ? (
-                        <div className="flex-row">
-                            <label htmlFor="city-select" className="label">Select
-                                city:</label>
-                            <select
-                                id="city-select"
-                                value={selectedCity?.id || ''}
-                                onChange={e => handleCityChange(e.target.value)}
-                                className="input-wide"
-                            >
-                                <option value="">-- Select a city --</option>
-                                {cities.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
+                        <div className="city-list">
+                            {cities.map(city => (
+                                <button
+                                    key={city.id}
+                                    className={`city-list-item${selectedCity?.id === city.id ? ' selected' : ''}`}
+                                    onClick={() => onCitySelect(city)}
+                                    type="button"
+                                    title={city.name}
+                                >
+                                    {city.name}
+                                </button>
+                            ))}
                         </div>
                     ) : (
                         <p className="city-empty-state">
@@ -170,6 +171,17 @@ export default function CityManager({
                         </p>
                     )}
                 </section>
+            )}
+
+            {/* Fixed: use showConfirm instead of showDeleteConfirm */}
+            {showConfirm && selectedCity && (
+                <ConfirmationDialog
+                    message={`Delete city "${selectedCity.name}"? This will remove all sectors. This cannot be undone.`}
+                    confirmLabel="Delete"
+                    cancelLabel="Cancel"
+                    onConfirm={confirmDelete}
+                    onCancel={cancelDelete}
+                />
             )}
         </>
     );

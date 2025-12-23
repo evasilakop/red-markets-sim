@@ -41,6 +41,7 @@ interface SectorManagerProps {
  * React component for managing sector operations within the selected city.
  * Loads sectors when the city changes, applies actions via a web worker,
  * persist updates to the database, and provides user feedback for errors.
+ * testing for code reviewer
  * @param props Component props
  * @returns The rendered SectorManager component
  */

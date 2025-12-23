@@ -38,57 +38,6 @@ export default function App() {
     }, [selectedWorld]);
 
     /*
-    ========================================
-                Event handlers
-    ========================================
-     */
-    // const handleApplyAction = async (sectorType: SectorType) => {
-    //     if (!selectedCity || busy) return;
-    //
-    //     try {
-    //         // Create actions map for this single action
-    //         const actions: Record<SectorType, UserAction[]> = {
-    //             [sectorType]: [{
-    //                 sector: sectorType,
-    //                 type: selectedAction,
-    //                 magnitude: actionMagnitude
-    //             }]
-    //         } as Record<SectorType, UserAction[]>;
-    //
-    //         // Apply via worker
-    //         const updatedSectors = await applyActions(sectors, actions);
-    //
-    //         // Save to database
-    //         await updateSectorsInCity(selectedCity.id, updatedSectors);
-    //
-    //         // Update UI
-    //         setSectors(updatedSectors.sort((a, b) => a.type.localeCompare(b.type)));
-    //
-    //     } catch (error) {
-    //         console.error('Error applying action:', error);
-    //         alert('Error applying action. Check console for details.');
-    //     }
-    // };
-    //
-    // const handleTickCity = async () => {
-    //     if (!selectedCity || busy) return;
-    //     try {
-    //         // Apply tick via worker
-    //         const updatedSectors = await tick(sectors);
-    //
-    //         // Save to database
-    //         await updateSectorsInCity(selectedCity.id, updatedSectors);
-    //
-    //         // Update UI
-    //         setSectors(updatedSectors.sort((a, b) => a.type.localeCompare(b.type)));
-    //
-    //     } catch (error) {
-    //         console.error('Error ticking city:', error);
-    //         alert('Error advancing time. Check console for details.');
-    //     }
-    // };
-
-    /*
     =================================================
                         Tests
     =================================================
@@ -135,7 +84,6 @@ export default function App() {
         }
     };
 
-// Add this temporary test function
     const createLargeTestFile = () => {
         // Create a large JSON string (about 15MB)
         const largeData = {
