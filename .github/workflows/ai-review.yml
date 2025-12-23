@@ -1,14 +1,16 @@
 name: AI Code Review
 
-permissions:
-  contents: read
-  pull-requests: write
-
 on:
   pull_request:
     types: [opened, synchronize]
-  # Allows you to run it manually if needed
   workflow_dispatch:
+
+# 1. FIX: Grant explicit permissions
+permissions:
+  contents: read
+  pull-requests: write
+  # This might be needed if the action tries to read variables
+  actions: read 
 
 jobs:
   review:
@@ -22,7 +24,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # Optional: Change to 'gpt-4' if you have access and want better reviews
-          MODEL: gpt-3.5-turbo 
-          # Optional: Change language to 'Chinese', 'Japanese', etc. Default is English.
-          LANGUAGE: English
+          MODEL: gpt-3.5-turbo
