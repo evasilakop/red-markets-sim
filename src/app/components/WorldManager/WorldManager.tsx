@@ -59,7 +59,6 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
         }
     }, [onWorldSelect, selectedWorld]);
 
-    // 2. CONSISTENCY: Use active flag pattern in useEffect
     useEffect(() => {
         let active = true;
         refreshWorlds(active);
@@ -103,7 +102,6 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
     const handleWorldChange = (worldId: string) => {
         const world = worlds.find(w => w.id === worldId) || null;
         onWorldSelect(world);
-        showSuccess('World updated!');
     };
 
     /**
@@ -245,62 +243,67 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
                 </div>
 
                 {/* Actions Row */}
-                <div className="flex-row">
+                <div className="flex-row world-actions-toolbar">
                     <label className="label-wide">Actions:</label>
 
-                    {/* Create World */}
-                    <input
-                        type="text"
-                        value={newWorldName}
-                        onChange={e => setNewWorldName(e.target.value)}
-                        placeholder="World name"
-                        className="input-wide"
-                        disabled={isImporting || isExporting || isDeleting}
-                    />
-                    <button
-                        onClick={handleCreateWorld}
-                        disabled={isImporting || isExporting || isDeleting}
-                        className="btn btn-primary"
-                    >
-                        Create World
-                    </button>
+                    {/* Group 1: Create */}
+                    <div className="action-group">
+                        <input
+                            type="text"
+                            value={newWorldName}
+                            onChange={e => setNewWorldName(e.target.value)}
+                            placeholder="World name"
+                            className="input-wide"
+                            disabled={isImporting || isExporting || isDeleting}
+                        />
+                        <button
+                            onClick={handleCreateWorld}
+                            disabled={isImporting || isExporting || isDeleting}
+                            className="btn btn-primary"
+                        >
+                            Create
+                        </button>
+                    </div>
 
-                    <span className="divider">|</span>
+                    {/* Group 2: Manage (Export/Delete) */}
+                    <div className="action-group">
+                        {selectedWorld ? (
+                            <>
+                                <button
+                                    onClick={handleExportWorld}
+                                    disabled={isExporting || isImporting || isDeleting}
+                                    className={`btn btn-success ${isExporting ? 'btn-loading' : ''}`}
+                                >
+                                    {isExporting ? 'Exporting' : 'Export'}
+                                </button>
+                                <button
+                                    onClick={handleDeleteWorld}
+                                    disabled={isDeleting || isImporting || isExporting}
+                                    className={`btn btn-danger ${isDeleting ? 'btn-loading' : ''}`}
+                                >
+                                    {isDeleting ? 'Deleting' : 'Delete'}
+                                </button>
+                            </>
+                        ) : (
+                            <span style={{color: '#999', fontStyle: 'italic', padding: '0 8px'}}>
+                                Select a world first
+                            </span>
+                        )}
+                    </div>
 
-                    {/* World Operations */}
-                    {selectedWorld ? (
-                        <>
-                            <button
-                                onClick={handleExportWorld}
-                                disabled={isExporting || isImporting || isDeleting}
-                                className={`btn btn-success ${isExporting ? 'btn-loading' : ''}`}
-                            >
-                                {isExporting ? 'Exporting' : 'Export World'}
-                            </button>
-                            <button
-                                onClick={handleDeleteWorld}
-                                disabled={isDeleting || isImporting || isExporting}
-                                className={`btn btn-danger ${isDeleting ? 'btn-loading' : ''}`}
-                            >
-                                {isDeleting ? 'Deleting' : 'Delete World'}
-                            </button>
-                        </>
-                    ) : (
-                        <span style={{color: '#999', fontStyle: 'italic'}}>Select a world first</span>
-                    )}
-
-                    <span className="divider">|</span>
-
-                    {/*Import world file*/}
-                    <input
-                        type="file"
-                        accept=".json,.rmworld.json"
-                        onChange={handleImportWorld}
-                        disabled={isImporting || isExporting || isDeleting}
-                        className="input-wide"
-                    />
-                    {isImporting && <span className="loading-text">Importing...</span>}
+                    {/* Group 3: Import */}
+                    <div className="action-group">
+                        <input
+                            type="file"
+                            accept=".json,.rmworld.json"
+                            onChange={handleImportWorld}
+                            disabled={isImporting || isExporting || isDeleting}
+                            className="input-wide file-input"
+                        />
+                        {isImporting && <span className="loading-text">Importing...</span>}
+                    </div>
                 </div>
+
             </section>
             {showConfirm && selectedWorld && (
                 <ConfirmationDialog

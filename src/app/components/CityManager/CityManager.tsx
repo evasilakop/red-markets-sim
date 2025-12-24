@@ -12,14 +12,10 @@ import './CityManager.css';
 interface CityManagerProps {
     /* The currently selected world, or null if none selected */
     selectedWorld: World | null;
-    /* List of cities belonging to the selected world */
-    cities: City[];
     /* The currently selected city, or null if none selected */
     selectedCity: City | null;
     /* Callback invoked when user selects a different city (or clears selection) */
     onCitySelect: (city: City | null) => void;
-    /* Callback invoked when the list of cities changes (e.g., add/remove/refresh) */
-    onCitiesChange: (cities: City[]) => void;
 }
 
 /**
@@ -31,23 +27,30 @@ interface CityManagerProps {
 * @returns The rendered CityManager component
 */
 export default function CityManager({
-                                    selectedWorld,
-                                    cities,
-                                    selectedCity,
-                                    onCitySelect,
-                                    onCitiesChange
+                                        selectedWorld,
+                                        selectedCity,
+                                        onCitySelect
                                     }: CityManagerProps) {
     const {showSuccess, showError} = useMessages('city');
     const [showConfirm, setShowConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    // Manage city list state internally to prevent App re-renders
+    const [cities, setCities] = useState<City[]>([]);
 
-    // Memoize refreshCities so it doesn't break useEffect dependencies
+    /**
+     * Fetches the latest list of cities from the database and updates local state.
+     * Handles race conditions via the `isActive` flag.
+     * Memoizes refreshCities so it doesn't break useEffect dependencies
+     * @param worldId - The ID of the world to fetch cities for.
+     * @param isActive - A boolean flag from the useEffect cleanup to prevent setting state on unmounted components.
+     */
     const refreshCities = useCallback(async (worldId: string, isActive: boolean) => {
         try {
             const cs = await listCities(worldId);
             // CRITICAL: Only update state if this request is still "active"
             if (isActive) {
-                onCitiesChange(cs);
+                setCities(cs); // Update local state
+
                 // Only auto-select if we don't have a valid selection
                 if (!selectedCity && cs.length > 0) {
                     onCitySelect(cs[0]);
@@ -59,7 +62,7 @@ export default function CityManager({
                 showError("Failed to load cities");
             }
         }
-    }, [onCitiesChange, onCitySelect, selectedCity, showError]);
+    }, [onCitySelect, selectedCity, showError]);
 
     // Handle World Changes safely
     useEffect(() => {
@@ -68,16 +71,20 @@ export default function CityManager({
         if (selectedWorld) {
             refreshCities(selectedWorld.id, active);
         } else {
-            onCitiesChange([]);
+            setCities([]); // Clear local state
             onCitySelect(null);
         }
-
         // Cleanup function runs when selectedWorld changes or component unmounts
         return () => {
             active = false;
         };
     }, [selectedWorld, refreshCities]); // Proper dependencies
 
+    /*
+    =====================================================================
+                              Event handlers
+    =====================================================================
+     */
     /**
      * Creates a new city in the currently selected world and updates the list.
      * Auto-selects the newly created city.
@@ -95,11 +102,20 @@ export default function CityManager({
         }
     };
 
+    /**
+     * Triggers the confirmation dialog for city deletion.
+     * Validates that a city and world are currently selected.
+     */
     const handleRemoveCity = () => {
         if (!selectedCity || !selectedWorld) return;
         setShowConfirm(true);
     };
 
+    /**
+     * Executes the deletion of the selected city and all its associated sectors.
+     * Updates the UI state, clears the selection, and refreshes the list on success.
+     * Handles errors by displaying a user-friendly message.
+     */
     const confirmDeleteCity = async () => {
         if (!selectedCity || !selectedWorld) return;
         setShowConfirm(false);
@@ -123,10 +139,18 @@ export default function CityManager({
         }
     };
 
+    /**
+     * Closes the delete confirmation dialog without performing any action.
+     */
     const cancelDeleteCity = () => {
         setShowConfirm(false);
     };
 
+    /*
+    =====================================================================
+                                Render
+    =====================================================================
+    */
     return (
         <>
             {selectedWorld && (

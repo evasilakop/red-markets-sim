@@ -1,5 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {chipsFor, competitionDiceFor, deriveEquilibrium} from '../app/services/sim.ts';
+import { applyActionToSector, tickSector } from '../app/services/sim.ts';
+import type { Sector } from '../app/common/types';
 
 describe('deriveEquilibrium', () => {
     it('FLOODED when high supply, low demand', () => {
@@ -63,5 +65,68 @@ describe('competitionDiceFor', () => {
         expect(competitionDiceFor('VOLATILE')).toBe(0);
         expect(competitionDiceFor('SUBSIDIARY')).toBe(-3);
         expect(competitionDiceFor('SCARCE')).toBe(-1);
+    });
+});
+
+// Helper to create a dummy sector for testing actions/ticks
+const createSector = (overrides?: Partial<Sector>): Sector => ({
+    id: 'test-id',
+    cityId: 'city-id',
+    type: 'FOOD & WATER',
+    supply: 50,
+    demand: 50,
+    equilibrium: 'VOLATILE',
+    startingChips: 0,
+    competitionUndercutDice: 0,
+    updatedAt: Date.now(),
+    ...overrides
+});
+
+describe('tickSector', () => {
+    it('should drift values slightly (ambient noise)', () => {
+        const sector = createSector({ supply: 50, demand: 50 });
+        const result = tickSector(sector);
+
+        // It shouldn't be exactly the same (noise), but shouldn't explode
+        expect(result.supply).not.toBe(50);
+        expect(result.supply).toBeGreaterThan(40);
+        expect(result.supply).toBeLessThan(60);
+    });
+
+    it('should clamp values between 0 and 100', () => {
+        // Force a massive drift up (simulating via repeated ticks or extreme noise)
+        // We simulate this by mocking a sector that is already at the limit
+        const sector = createSector({ supply: 100, demand: 100 });
+        const result = tickSector(sector);
+
+        expect(result.supply).toBeLessThanOrEqual(100);
+        expect(result.demand).toBeLessThanOrEqual(100);
+        expect(result.supply).toBeGreaterThanOrEqual(0);
+    });
+});
+
+describe('applyActionToSector', () => {
+    it('should increase demand when action is INCREASE_DEMAND', () => {
+        const sector = createSector({ demand: 50 });
+        const action = { sector: 'FOOD & WATER' as const, type: 'INCREASE_DEMAND' as const, magnitude: 5 };
+
+        const result = applyActionToSector(sector, action);
+        expect(result.demand).toBeGreaterThan(50);
+    });
+
+    it('should decrease supply when action is SABOTAGE', () => {
+        const sector = createSector({ supply: 50 });
+        const action = { sector: 'FOOD & WATER' as const, type: 'SABOTAGE' as const, magnitude: 5 };
+
+        const result = applyActionToSector(sector, action);
+        expect(result.supply).toBeLessThan(50);
+    });
+
+    it('should clamp values after action', () => {
+        const sector = createSector({ supply: 98 });
+        const action = { sector: 'FOOD & WATER' as const, type: 'INCREASE_SUPPLY' as const, magnitude: 10 };
+
+        const result = applyActionToSector(sector, action);
+        expect(result.supply).toBe(100); // Should not exceed 100
     });
 });

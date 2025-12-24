@@ -22,9 +22,6 @@
 }
 
 /* Labels */
-.label {
-    font-weight: 500;
-}
 
 .label-wide {
     min-width: 80px;
@@ -50,13 +47,6 @@
     padding: 4px 8px;
     border: 1px solid #ccc;
     border-radius: 3px;
-}
-
-/* Button groups */
-.button-group {
-    display: flex;
-    align-items: center;
-    gap: 12px;
 }
 
 /* ===== BUTTONS ===== */
@@ -163,61 +153,41 @@
     border-top: 1px solid #eee;
 }
 
-/* Sector Display */
-.sector-display {
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+/* Responsive Toolbar */
+.world-actions-toolbar {
+    display: flex;
+    flex-wrap: wrap; /* Allow items to drop to next line */
+    align-items: center;
+    gap: 16px; /* Space between the groups */
 }
 
-.action-controls {
-    padding: 12px;
-    margin-bottom: 16px;
-    background-color: #f9f9f9;
-    border-radius: 4px;
+.action-group {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Space between buttons inside a group */
+
+    /* Optional: Add a subtle separator line between groups */
+    padding-right: 16px;
+    border-right: 1px solid #ddd;
 }
 
-.tick-button {
-    margin-left: 20px;
+/* Remove separator from the last group */
+.action-group:last-child {
+    border-right: none;
+    padding-right: 0;
 }
 
-/* Sectors Table */
-.sectors-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 8px;
-}
+/* On very small screens, make the groups stack nicely */
+@media (max-width: 768px) {
+    .world-actions-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
-.sectors-table th {
-    padding: 8px;
-    border: 1px solid #ddd;
-    background-color: #f5f5f5;
-    font-weight: 600;
-}
-
-.sectors-table th.text-left {
-    text-align: left;
-}
-
-.sectors-table th.text-center {
-    text-align: center;
-}
-
-.sectors-table td {
-    padding: 8px;
-    border: 1px solid #ddd;
-    text-align: center;
-}
-
-.sectors-table td.sector-name {
-    font-family: monospace;
-    text-align: left;
-}
-
-/* ===== DIVIDERS ===== */
-.divider {
-    color: #ccc;
-    font-weight: normal;
-    margin: 0 8px;
-    user-select: none;
+    .action-group {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 8px;
+    }
 }
