@@ -1,39 +1,24 @@
 import {useEffect, useState} from 'react';
-import type {ActionType, City, Sector, World} from './common/types.ts';
-
+import type { City, World} from './common/types.ts';
 import WorldManager from './components/WorldManager/WorldManager';
 import CityManager from './components/CityManager/CityManager';
-import SectorManager from "./components/SectorManager/SectorManager.tsx";
-import {useSimWorker} from "./hooks/useSimWorker.ts";
+import CityDashboard from "./components/CityDashboard/CityDashboard.tsx";
 import './App.css';
 
 export default function App() {
     // State for worlds
     const [selectedWorld, setSelectedWorld] = useState<World | null>(null);
-    const [selectedAction, setSelectedAction] = useState<ActionType>('MARKET');
-    const [actionMagnitude, setActionMagnitude] = useState<number>(1);
 
     // State for cities
-    const [cities, setCities] = useState<City[]>([]);
     const [selectedCity, setSelectedCity] = useState<City | null>(null);
-
-    // State for sectors
-    const [sectors, setSectors] = useState<Sector[]>([]);
-
-    // WebWorker states
-    const {busy, applyActions, tick} = useSimWorker();
 
     // Clears the city and sector displays when selecting a world
     useEffect(() => {
         if (selectedWorld) {
-            // World changed - clear city/sector state so components can load fresh data
             setSelectedCity(null);
-            setSectors([]);
         } else {
             // No world selected - clear everything
-            setCities([]);
             setSelectedCity(null);
-            setSectors([]);
         }
     }, [selectedWorld]);
 
@@ -121,26 +106,15 @@ export default function App() {
                 selectedWorld={selectedWorld}
                 onWorldSelect={setSelectedWorld}
             />
-            {/* CityManager component*/}
+            {/* CityManager component */}
             <CityManager
                 selectedWorld={selectedWorld}
-                cities={cities}
                 selectedCity={selectedCity}
                 onCitySelect={setSelectedCity}
-                onCitiesChange={setCities}
             />
-            {/*SectorManager component*/}
-            <SectorManager
-                selectedCity={selectedCity}
-                sectors={sectors}
-                selectedAction={selectedAction}
-                actionMagnitude={actionMagnitude}
-                busy={busy}
-                onSectorsChange={setSectors}
-                onActionChange={setSelectedAction}
-                onMagnitudeChange={setActionMagnitude}
-                applyActions={applyActions}
-                tick={tick}
+            {/* CityDashboard component */}
+            <CityDashboard
+                cityId={selectedCity?.id || null}
             />
         </div>
     );

@@ -1,15 +1,16 @@
 import type {Sector, WorkerRequest, WorkerResponse} from '../../common/types.ts';
-import {applyActionToSector, tickSector} from '../../sim.ts';
+import {applyActionToSector, tickSector} from '../sim.ts';
 
-// Handle messages from the main thread
 self.onmessage = (e: MessageEvent<WorkerRequest>) => {
+    // Get id here so it is available for catch if needed.
+    const { id } = e.data;
+
     try {
         const request = e.data;
-        let result: Sector[];
+        let resultSectors: Sector[];
 
         if (request.type === 'applyActions') {
-            // Apply actions to sectors
-            result = request.sectors.map(sector => {
+            resultSectors = request.sectors.map(sector => {
                 const actionsForSector = request.actions[sector.type] || [];
                 return actionsForSector.reduce(
                     (updatedSector, action) => applyActionToSector(updatedSector, action),
@@ -17,23 +18,24 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
                 );
             });
         } else if (request.type === 'tick') {
-            // Apply tick to all sectors
-            result = request.sectors.map(sector => tickSector(sector));
+            resultSectors = request.sectors.map(sector => tickSector(sector));
         } else {
+            // TypeScript knows this branch is impossible if types cover all cases,
+            // but good for runtime safety
             // noinspection ExceptionCaughtLocallyJS
-            throw new Error(`Unknown request type: ${(request as any).type}`);
+            throw new Error(`Unknown request type`);
         }
 
-        // Send success response
         const response: WorkerResponse = {
+            id,
             type: 'result',
-            sectors: result
+            sectors: resultSectors
         };
         self.postMessage(response);
 
     } catch (error) {
-        // Send error response
         const errorResponse: WorkerResponse = {
+            id,
             type: 'error',
             message: error instanceof Error ? error.message : 'Unknown worker error'
         };

@@ -13,7 +13,7 @@ const { mockShowSuccess, mockShowError } = vi.hoisted(() => ({
     mockShowError: vi.fn()
 }));
 
-// 2. Mock Hooks
+// 2. Mock Hooks so that we don't use the real ones
 vi.mock('../app/hooks/useMessages', () => ({
     useMessages: () => ({
         showSuccess: mockShowSuccess,
@@ -38,7 +38,6 @@ interface MockConfirmationDialogProps {
     onCancel: () => void;
 }
 
-// Path: src/tests -> ../app/common/ConfirmationDialog
 vi.mock('../app/common/ConfirmationDialog', () => ({
     default: ({ message, confirmLabel, cancelLabel, onConfirm, onCancel }: MockConfirmationDialogProps) => (
         <div data-testid="confirmation-dialog">
@@ -76,9 +75,7 @@ const defaultProps = {
 describe('CityManager', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-
         vi.spyOn(worldService, 'listCities').mockResolvedValue(mockCities);
-
         vi.spyOn(worldService, 'addCity').mockResolvedValue({
             sectors: [],
             city: { id: 'new-city', worldId: 'world-1', name: 'New City', lastTick: Date.now() }
@@ -94,7 +91,7 @@ describe('CityManager', () => {
         });
 
         it('shows empty state message when no cities exist', () => {
-            render(<CityManager {...defaultProps} cities={[]} selectedCity={null} />);
+            render(<CityManager {...defaultProps} selectedCity={null} />);
             expect(screen.getByText('No cities yet. Add one to get started!')).toBeDefined();
             expect(screen.queryByText('Remove City')).toBeNull();
         });
@@ -117,10 +114,20 @@ describe('CityManager', () => {
     });
 
     describe('City Selection', () => {
-        it('highlights selected city', () => {
+        it('highlights selected city', async () => {
             render(<CityManager {...defaultProps} />);
-            const selectedCityButton = screen.getByText('City One');
+
+            // USE findByText (Async) instead of getByText
+            const selectedCityButton = await screen.findByText('City One');
             expect(selectedCityButton.className).toContain('selected');
+        });
+
+        it('shows city list without highlighting when no city is selected', async () => {
+            render(<CityManager {...defaultProps} selectedCity={null}/>);
+
+            // Wait for data to load
+            expect(await screen.findByText('City One')).toBeDefined();
+            expect(screen.getByText('City Two')).toBeDefined();
         });
 
         it('calls onCitySelect when city is clicked', async () => {
@@ -145,12 +152,11 @@ describe('CityManager', () => {
     describe('Add City', () => {
         it('prompts for city name and creates city', async () => {
             const user = userEvent.setup();
-            const onCitiesChange = vi.fn();
             const onCitySelect = vi.fn();
 
             vi.stubGlobal('prompt', vi.fn().mockReturnValue('New Test City'));
 
-            render(<CityManager {...defaultProps} onCitiesChange={onCitiesChange} onCitySelect={onCitySelect} />);
+            render(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
             await user.click(screen.getByText('Add City'));
 
             expect(worldService.addCity).toHaveBeenCalledWith('world-1', 'New Test City');
@@ -199,9 +205,8 @@ describe('CityManager', () => {
         it('deletes city when confirmed', async () => {
             const user = userEvent.setup();
             const onCitySelect = vi.fn();
-            const onCitiesChange = vi.fn();
 
-            render(<CityManager {...defaultProps} onCitySelect={onCitySelect} onCitiesChange={onCitiesChange} />);
+            render(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
 
             await user.click(screen.getByText('Remove City'));
             await user.click(screen.getByText('Delete'));
@@ -247,41 +252,32 @@ describe('CityManager', () => {
     });
 
     describe('World Changes', () => {
-        it('refreshes cities when world changes', () => {
+        it('refreshes cities when world changes', async () => {
             const { rerender } = render(<CityManager {...defaultProps} />);
+            await screen.findByText('City One');
             const newWorld = { ...mockWorld, id: 'world-2', name: 'New World' };
             rerender(<CityManager {...defaultProps} selectedWorld={newWorld} />);
 
             expect(worldService.listCities).toHaveBeenCalledWith('world-2');
         });
 
-        it('clears cities and selection when world is deselected', () => {
-            const onCitiesChange = vi.fn();
+        it('clears cities and selection when world is deselected', async () => {
             const onCitySelect = vi.fn();
             const { rerender } = render(
-                <CityManager {...defaultProps} onCitiesChange={onCitiesChange} onCitySelect={onCitySelect} />
+                <CityManager {...defaultProps} onCitySelect={onCitySelect} />
             );
-
+            await screen.findByText('City One');
             rerender(
                 <CityManager {...defaultProps}
                              selectedWorld={null}
-                             onCitiesChange={onCitiesChange}
                              onCitySelect={onCitySelect}
                 />);
 
-            expect(onCitiesChange).toHaveBeenCalledWith([]);
             expect(onCitySelect).toHaveBeenCalledWith(null);
-        });
-
-        it('auto-selects first city when cities are loaded and none selected', async () => {
-            const onCitySelect = vi.fn();
-            render(<CityManager {...defaultProps} selectedCity={null} onCitySelect={onCitySelect} />);
-
-            await waitFor(() => {
-                expect(onCitySelect).toHaveBeenCalledWith(mockCities[0]);
-            });
+            expect(screen.queryByText('Cities in Test World')).toBeNull();
         });
     });
+
 
     describe('Edge Cases', () => {
         it('handles empty city name gracefully', async () => {

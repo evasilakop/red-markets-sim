@@ -74,7 +74,7 @@ export type ActionType =
 export interface UserAction {
     sector: SectorType;
     type: ActionType;
-    magnitude: number; // 0-10
+    magnitude: number;
 }
 
 /*
@@ -94,7 +94,7 @@ export type TickMsg = {
     sectors: Sector[];
 };
 
-export type WorkerRequest = ApplyActionsMsg | TickMsg;
+export type WorkerRequest = (ApplyActionsMsg | TickMsg) & {id: string};
 
 export type ResultMsg = {
     type: 'result';
@@ -106,7 +106,7 @@ export type ErrorMsg = {
     message: string;
 };
 
-export type WorkerResponse = ResultMsg | ErrorMsg;
+export type WorkerResponse = (ResultMsg | ErrorMsg) & {id: string};
 
 export type OperationResult = {
     success: boolean;
@@ -121,7 +121,4 @@ export type OperationResult = {
  */
 
 export type MessageScope = 'world' | 'city' | 'sector' | 'settings';
-export const ALL_MESSAGE_SCOPES: MessageScope[] = ['world', 'city', 'sector'];
-
 export type MessageType = 'success' | 'warning' | 'error';
-export const ALL_MESSAGE_TYPES: MessageType[] = ['success', 'warning', 'error'];
