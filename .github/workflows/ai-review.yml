@@ -24,5 +24,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
           MODEL: gpt-3.5-turbo
