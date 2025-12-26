@@ -1,7 +1,7 @@
 import {type ActionType, type Sector} from '../../common/types';
 import {formatPriceIndex, getEquilibriumDisplay} from '../../utils/displayUtils';
 import ActionSelector from './ActionSelector';
-import {Badge, Group, Progress, Stack, Table, Text} from "@mantine/core";
+import {Badge, Group, Progress, Stack, Table, Text} from '@mantine/core';
 
 interface SectorRowProps {
     sector: Sector;
@@ -25,10 +25,16 @@ export default function SectorRow({ sector, onAction, isBusy = false }: SectorRo
                 size={'md'}
                 radius={'xl'}
                 style={{ flex: 1 }} // Take up remaining space
+                visibleFrom={'md'} // only visible when there is enough screen space
             />
         </Group>
     );
 
+    /*
+    =====================================================================
+                                Render
+    =====================================================================
+    */
     return (
         <Table.Tr>
             <Table.Td fw={700} width={150} >

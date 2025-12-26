@@ -3,13 +3,13 @@ import {useSimWorker} from '../../hooks/useSimWorker';
 import {db} from '../../services/db';
 import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
-import {Button, Group, Paper, Table, Text, Title} from "@mantine/core";
+import {Button, Group, Paper, Table, Text, Title} from '@mantine/core';
 
 interface CityDashboardProps {
     cityId: string | null;
 }
 
-export function CityDashboard({cityId}: CityDashboardProps) {
+export default function CityDashboard({cityId}: CityDashboardProps) {
     const data = useCityData(cityId);
     const {busy, tick, applyActions} = useSimWorker();
 
@@ -105,29 +105,32 @@ export function CityDashboard({cityId}: CityDashboardProps) {
             </Group>
 
             {/* Main Sector Table */}
-            <Table striped highlightOnHover={true} stickyHeader withRowBorders={false}>
-                <Table.Thead>
-                    <Table.Tr >
-                        <Table.Th ta={'center'}>Sector</Table.Th>
-                        <Table.Th ta={'center'}>Supply</Table.Th>
-                        <Table.Th ta={'center'}>Demand</Table.Th>
-                        <Table.Th ta={'center'}>State</Table.Th>
-                        <Table.Th ta={'center'}>Stats</Table.Th>
-                        <Table.Th ta={'center'}>Price</Table.Th>
-                        <Table.Th ta={'center'}>Actions</Table.Th>
-                    </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                    {sectors.map(sector => (
-                        <SectorRow
-                            key={sector.id}
-                            sector={sector}
-                            onAction={handleAction}
-                            isBusy={busy} // Pass busy state down to disable inputs
-                        />
-                    ))}
-                </Table.Tbody>
-            </Table>
+            <Table.ScrollContainer minWidth={500}>
+                <Table striped highlightOnHover={true} stickyHeader
+                       withRowBorders={false}>
+                    <Table.Thead>
+                        <Table.Tr>
+                            <Table.Th ta={'center'}>Sector</Table.Th>
+                            <Table.Th ta={'center'}>Supply</Table.Th>
+                            <Table.Th ta={'center'}>Demand</Table.Th>
+                            <Table.Th ta={'center'}>State</Table.Th>
+                            <Table.Th ta={'center'}>Stats</Table.Th>
+                            <Table.Th ta={'center'}>Price</Table.Th>
+                            <Table.Th ta={'center'}>Actions</Table.Th>
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {sectors.map(sector => (
+                            <SectorRow
+                                key={sector.id}
+                                sector={sector}
+                                onAction={handleAction}
+                                isBusy={busy} // Pass busy state down to disable inputs
+                            />
+                        ))}
+                    </Table.Tbody>
+                </Table>
+            </Table.ScrollContainer>
         </Paper>
     );
 }

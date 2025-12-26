@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {MantineProvider} from '@mantine/core';
-import {Notifications} from "@mantine/notifications";
+import {Notifications} from '@mantine/notifications';
 import {ModalsProvider} from '@mantine/modals';
 import App from './App.tsx';
 
