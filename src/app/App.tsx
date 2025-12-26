@@ -2,8 +2,7 @@ import {useEffect, useState} from 'react';
 import type { City, World} from './common/types.ts';
 import WorldManager from './components/WorldManager/WorldManager';
 import CityManager from './components/CityManager/CityManager';
-import CityDashboard from "./components/CityDashboard/CityDashboard.tsx";
-import './App.css';
+import {CityDashboard} from "./components/CityDashboard/CityDashboard.tsx";
 
 export default function App() {
     // State for worlds

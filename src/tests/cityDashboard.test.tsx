@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import CityDashboard from '../app/components/CityDashboard/CityDashboard';
+import '../app/components/CityDashboard/CityDashboard';
 import type { CityData } from '../app/hooks/useCityData';
+import { MantineProvider } from '@mantine/core';
+import {CityDashboard} from "../app/components/CityDashboard/CityDashboard.tsx";
 
-// 1. Mock Hooks
+// 1. Import Provider
 const mockTick = vi.fn();
 const mockApplyActions = vi.fn();
 
@@ -15,13 +17,11 @@ vi.mock('../../hooks/useSimWorker', () => ({
     })
 }));
 
-// 2. Mock city data
 const mockUseCityData = vi.fn();
 vi.mock('../../hooks/useCityData', () => ({
     useCityData: (id: string | null) => mockUseCityData(id)
 }));
 
-// 3. Mock DB
 vi.mock('../../services/db', () => ({
     db: {
         transaction: vi.fn((_mode, _tables, callback) => callback()),
@@ -30,10 +30,22 @@ vi.mock('../../services/db', () => ({
     }
 }));
 
+// Helper to wrap components in MantineProvider
+const renderWithMantine = (ui: React.ReactNode) => {
+    return render(
+        <MantineProvider>
+            {ui}
+        </MantineProvider>
+    );
+};
+
 describe('CityDashboard', () => {
     it('renders loading state when data is undefined', () => {
         mockUseCityData.mockReturnValue(undefined);
-        render(<CityDashboard cityId="city-1" />);
+
+        // Use the wrapper
+        renderWithMantine(<CityDashboard cityId="city-1" />);
+
         expect(screen.queryByText(/Loading market data/i)).not.toBeNull();
     });
 
@@ -50,12 +62,10 @@ describe('CityDashboard', () => {
         };
         mockUseCityData.mockReturnValue(mockData);
 
-        render(<CityDashboard cityId="c1" />);
+        renderWithMantine(<CityDashboard cityId="c1" />);
 
-        // Check for City Name
-        expect(screen.getByText('Test City Market')).not.toBeNull();
-        // Check for Sector Row
-        expect(screen.getByText('FOOD & WATER')).not.toBeNull();
+        expect(screen.queryByText('Test City Market')).not.toBeNull();
+        expect(screen.queryByText('FOOD & WATER')).not.toBeNull();
     });
 
     it('calls tick function when Advance Time is clicked', () => {
@@ -64,11 +74,13 @@ describe('CityDashboard', () => {
             sectors: []
         };
         mockUseCityData.mockReturnValue(mockData);
-        mockTick.mockResolvedValue([]); // Worker returns empty array
+        mockTick.mockResolvedValue([]);
 
-        render(<CityDashboard cityId="c1" />);
+        renderWithMantine(<CityDashboard cityId="c1" />);
 
-        const tickBtn = screen.getByText(/Advance Time/i);
+        // Note: Mantine buttons might render text slightly differently (e.g. inside a span)
+        // Using a regex /Advance Time/i is safest
+        const tickBtn = screen.getByRole('button', { name: /Advance Time/i });
         fireEvent.click(tickBtn);
 
         expect(mockTick).toHaveBeenCalled();

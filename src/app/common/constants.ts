@@ -1,6 +1,5 @@
 import {
     type ActionType,
-    type MessageScope,
     type MessageType,
     type SectorType
 } from './types';
@@ -11,7 +10,6 @@ import {
     ===========================================
 */
 
-export const ALL_MESSAGE_SCOPES: MessageScope[] = ['world', 'city', 'sector'];
 export const ALL_MESSAGE_TYPES: MessageType[] = ['success', 'warning', 'error'];
 
 /*

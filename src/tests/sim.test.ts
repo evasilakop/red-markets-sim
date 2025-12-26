@@ -1,6 +1,11 @@
 import {describe, expect, it} from 'vitest';
-import {chipsFor, competitionDiceFor, deriveEquilibrium} from '../app/services/sim.ts';
-import { applyActionToSector, tickSector } from '../app/services/sim.ts';
+import {
+    chipsFor,
+    competitionDiceFor,
+    deriveEquilibrium,
+    applyActionToSector,
+    tickSector
+} from '../app/services/sim.ts';
 import type { Sector } from '../app/common/types';
 
 describe('deriveEquilibrium', () => {

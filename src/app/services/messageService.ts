@@ -1,10 +1,9 @@
-import type {MessageScope, MessageType} from "../common/types.ts";
+import type { MessageType} from "../common/types.ts";
 
 export interface Message {
     id: string;
     type: MessageType;
     text: string;
-    scope: MessageScope;
     timestamp: number;
 }
 
@@ -20,17 +19,15 @@ class MessageService {
      * Displays a message to users with automatic dismissal
      * @param type - Message type (success, error, warning)
      * @param text - Message content to display
-     * @param scope - Which component scope should show this message
      * @param duration - Auto-dismiss time in ms (0 = no auto-dismiss) default 5 seconds
      * @returns Message ID for manual dismissal
      */
-    show(type: Message['type'], text: string, scope: MessageScope, duration: number = 5000): string {
+    show(type: Message['type'], text: string, duration: number = 5000): string {
         const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const message: Message = {
             id,
             type,
             text,
-            scope,
             timestamp: Date.now()
         };
 
@@ -74,16 +71,6 @@ class MessageService {
     }
 
     /**
-     * Clears all messages for a specific scope.
-     * @param scope The message scope to clear (e.g. 'world', 'city')
-     */
-    clearScope(scope: MessageScope): void {
-        const messagesToClear = this.messages.filter(msg => msg.scope === scope);
-        messagesToClear.forEach(msg => this.dismiss(msg.id));
-    }
-
-
-    /**
      * Returns a shallow copy of all current messages.
      * @returns Array of current messages
      */
@@ -117,29 +104,26 @@ export const messageService = new MessageService();
 /**
  * Function to show a success message in a given scope.
  * @param text Message text
- * @param scope Message scope
  * @param duration Auto-dismiss time in ms (optional)
  * @returns Message ID
  */
-export const showSuccess = (text: string, scope: MessageScope, duration?: number) =>
-    messageService.show('success', text, scope, duration);
+export const showSuccess = (text: string, duration?: number) =>
+    messageService.show('success', text, duration);
 
 /**
  * Function to show an error message in a given scope.
  * @param text Message text
- * @param scope Message scope
  * @param duration Auto-dismiss time in ms (optional)
  * @returns Message ID
  */
-export const showError = (text: string, scope: MessageScope, duration?: number) =>
-    messageService.show('error', text, scope, duration);
+export const showError = (text: string, duration?: number) =>
+    messageService.show('error', text, duration);
 
 /**
  * Function to show a warning message in a given scope.
  * @param text Message text
- * @param scope Message scope
  * @param duration Auto-dismiss time in ms (optional)
  * @returns Message ID
  */
-export const showWarning = (text: string, scope: MessageScope, duration?: number) =>
-    messageService.show('warning', text, scope, duration);
+export const showWarning = (text: string, duration?: number) =>
+    messageService.show('warning', text, duration);

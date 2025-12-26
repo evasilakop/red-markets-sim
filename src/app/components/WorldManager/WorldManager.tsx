@@ -1,9 +1,8 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {type World} from '../../common/types';
 import {useMessages} from "../../hooks/useMessages.ts";
 import {
     createWorld,
-    deleteWorld,
     exportWorld,
     importWorld,
     listWorlds
@@ -14,8 +13,6 @@ import {
     MAX_FILE_SIZE,
     SUPPORTED_FILE_TYPES
 } from "../../services/validation.ts";
-import MessageDisplay from "../MessageDisplay/MessageDisplay.tsx";
-import ConfirmationDialog from "../../common/ConfirmationDialog.tsx";
 
 /**
  * Props for the WorldManager component.
@@ -39,9 +36,7 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
     const [newWorldName, setNewWorldName] = useState('My World');
     const [isImporting, setIsImporting] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const {showSuccess, showError, showWarning} = useMessages('world');
+    const {showSuccess, showError, showWarning} = useMessages();
 
     const refreshWorlds = useCallback(async (isActive: boolean = true) => {
         try {
@@ -136,34 +131,6 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
      */
     const handleDeleteWorld = async () => {
         if (!selectedWorld) return;
-        setShowConfirm(true);
-    };
-
-    const confirmDeleteWorld = async () => {
-        if (!selectedWorld) return;
-        setShowConfirm(false);
-        setIsDeleting(true);
-
-        try {
-            const result = await deleteWorld(selectedWorld.id);
-            if (result.success) {
-                showSuccess(result.message || 'World deleted!');
-                onWorldSelect(null);
-                await refreshWorlds();
-            } else {
-                console.error(result.error);
-                showError(result.error?.toString() as string);
-            }
-        } catch (error) {
-            console.error('Delete world failed:', error);
-            showError('Delete world failed. Please try again.');
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    const cancelDeleteWorld = () => {
-        setShowConfirm(false);
     };
 
     const handleImportWorld = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,8 +190,6 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
         <>
             <section className="section">
                 <h3>World Management</h3>
-                <MessageDisplay scope="world"/>
-
                 <div className="flex-row">
                     <label htmlFor="world-select" className="label-wide">World:</label>
                     <select
@@ -254,11 +219,11 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
                             onChange={e => setNewWorldName(e.target.value)}
                             placeholder="World name"
                             className="input-wide"
-                            disabled={isImporting || isExporting || isDeleting}
+                            disabled={isImporting || isExporting}
                         />
                         <button
                             onClick={handleCreateWorld}
-                            disabled={isImporting || isExporting || isDeleting}
+                            disabled={isImporting || isExporting}
                             className="btn btn-primary"
                         >
                             Create
@@ -271,17 +236,15 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
                             <>
                                 <button
                                     onClick={handleExportWorld}
-                                    disabled={isExporting || isImporting || isDeleting}
+                                    disabled={isExporting || isImporting}
                                     className={`btn btn-success ${isExporting ? 'btn-loading' : ''}`}
                                 >
                                     {isExporting ? 'Exporting' : 'Export'}
                                 </button>
                                 <button
                                     onClick={handleDeleteWorld}
-                                    disabled={isDeleting || isImporting || isExporting}
-                                    className={`btn btn-danger ${isDeleting ? 'btn-loading' : ''}`}
-                                >
-                                    {isDeleting ? 'Deleting' : 'Delete'}
+                                    disabled={isImporting || isExporting}
+                                > Delete
                                 </button>
                             </>
                         ) : (
@@ -297,7 +260,7 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
                             type="file"
                             accept=".json,.rmworld.json"
                             onChange={handleImportWorld}
-                            disabled={isImporting || isExporting || isDeleting}
+                            disabled={isImporting || isExporting }
                             className="input-wide file-input"
                         />
                         {isImporting && <span className="loading-text">Importing...</span>}
@@ -305,15 +268,6 @@ export default function WorldManager({selectedWorld, onWorldSelect}: WorldManage
                 </div>
 
             </section>
-            {showConfirm && selectedWorld && (
-                <ConfirmationDialog
-                    message={`Delete world "${selectedWorld.name}"? This will remove all cities and sectors. This cannot be undone.`}
-                    confirmLabel="Delete"
-                    cancelLabel="Cancel"
-                    onConfirm={confirmDeleteWorld}
-                    onCancel={cancelDeleteWorld}
-                />
-            )}
         </>
     );
 }
