@@ -1,9 +1,9 @@
 import {useCallback, useEffect, useState} from 'react';
-import {addCity, listCities, removeCity} from "../../services/worldService.ts";
-import type {City, World} from "../../common/types.ts";
-import {useMessages} from "../../hooks/useMessages.ts";
-import {Button, Group, Paper, Stack, Text, TextInput, Title} from "@mantine/core";
-import {modals} from "@mantine/modals";
+import {addCity, listCities, removeCity} from '../../services/worldService.ts';
+import type {City, World} from '../../common/types.ts';
+import {useMessages} from '../../hooks/useMessages.ts';
+import {Button, Group, Paper, Stack, Text, TextInput, Title} from '@mantine/core';
+import {modals} from '@mantine/modals';
 
 /**
  * Props for the CityManager component.
@@ -85,8 +85,8 @@ export default function CityManager({
             centered: true,
             children: (
                 <TextInput
-                    label="Enter a name for the new city:"
-                    placeholder="City name"
+                    label={'Enter a name for the new city:'}
+                    placeholder={'City name'}
                     data-autofocus
                     // Capture the user's typing
                     onChange={(e) => { nameInput = e.currentTarget.value; }}
@@ -165,7 +165,7 @@ export default function CityManager({
     =====================================================================
     */
     return (
-        <Paper shadow={"xs"} p={"md"} withBorder m={'md'}>
+        <Paper shadow={'xs'} p={'md'} withBorder m={'md'}>
             {selectedWorld && (
                 <Stack>
                     <Group justify={'space-between'}>
@@ -193,7 +193,7 @@ export default function CityManager({
                     {cities.length > 0 ? (
                         <Group>
                             {cities.map(city => (
-                                <Button size={"xs"}
+                                <Button size={'xs'}
                                         variant={selectedCity?.id === city.id ? 'filled' : 'outline'}
                                         color={'teal'}
                                         key={city.id}

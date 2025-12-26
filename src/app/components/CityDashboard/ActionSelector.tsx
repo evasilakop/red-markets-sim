@@ -23,7 +23,7 @@ export default function ActionSelector({ onApply, disabled = false }: ActionSele
 
     return (
         <form onSubmit={handleSubmit}>
-            <Group gap={"xs"} wrap={"nowrap"}>
+            <Group gap={'xs'} wrap={'nowrap'}>
                 {/* 1. The Dropdown */}
                 <Select
                     data={ACTION_OPTIONS}

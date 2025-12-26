@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '../app/components/CityDashboard/CityDashboard';
 import type { CityData } from '../app/hooks/useCityData';
 import { MantineProvider } from '@mantine/core';
-import {CityDashboard} from "../app/components/CityDashboard/CityDashboard.tsx";
+import CityDashboard from "../app/components/CityDashboard/CityDashboard.tsx";
 
 // 1. Import Provider
 const mockTick = vi.fn();
