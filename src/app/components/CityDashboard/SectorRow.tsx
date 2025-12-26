@@ -1,7 +1,7 @@
-import { type Sector, type ActionType } from '../../common/types';
-import { getEquilibriumDisplay, formatPriceIndex } from '../../utils/displayUtils';
+import {type ActionType, type Sector} from '../../common/types';
+import {formatPriceIndex, getEquilibriumDisplay} from '../../utils/displayUtils';
 import ActionSelector from './ActionSelector';
-import './CityDashboard.css';
+import {Badge, Group, Progress, Stack, Table, Text} from "@mantine/core";
 
 interface SectorRowProps {
     sector: Sector;
@@ -12,63 +12,69 @@ interface SectorRowProps {
 export default function SectorRow({ sector, onAction, isBusy = false }: SectorRowProps) {
     const { label, color } = getEquilibriumDisplay(sector.equilibrium);
 
+    // Helper to render the value + bar
     const renderBar = (value: number, barColor: string) => (
-        <div className="bar-container">
-            <span className="bar-value">{value}</span>
-            <div className="bar-track">
-                <div
-                    className="bar-fill"
-                    style={{
-                        width: `${Math.min(100, Math.max(0, value))}%`,
-                        backgroundColor: barColor
-                    }}
-                />
-            </div>
-        </div>
+        <Group gap={'xs'} wrap={'nowrap'}>
+            {/* The Number */}
+            <Text size={'sm'} w={24} ta={'right'}>{value}</Text>
+
+            {/* The Bar */}
+            <Progress
+                value={value}
+                color={barColor}
+                size={'md'}
+                radius={'xl'}
+                style={{ flex: 1 }} // Take up remaining space
+            />
+        </Group>
     );
 
-    /*
-    =====================================================================
-                                Render
-    =====================================================================
-    */
     return (
-        <tr>
-            <td className="col-type">{sector.type}</td>
+        <Table.Tr>
+            <Table.Td fw={700} width={150} >
+                {sector.type}
+            </Table.Td>
 
-            <td className="col-bar">
-                {renderBar(sector.supply, '#2196f3')} {/* Blue for Supply */}
-            </td>
+            <Table.Td ta={'center'}>
+                {renderBar(sector.supply, 'blue')}
+            </Table.Td>
 
-            <td className="col-bar">
-                {renderBar(sector.demand, '#ff9800')} {/* Orange for Demand */}
-            </td>
+            <Table.Td>
+                {renderBar(sector.demand, 'orange')}
+            </Table.Td>
 
-            <td className="col-state">
-                <span className="equilibrium-badge" style={{ color: color }}>
+            <Table.Td ta={'center'}>
+                <Badge color={color} variant={'outline'} size={'lg'}>
                     {label}
-                </span>
-            </td>
+                </Badge>
+            </Table.Td>
 
-            <td className="col-stats">
-                <div className="stat-row" title="Starting Chips">
-                    <span>💰</span> {sector.startingChips}
-                </div>
-                <div className="stat-row" title="Competition Dice">
-                    <span>🎲</span> {sector.competitionUndercutDice}
-                </div>
-            </td>
+            <Table.Td>
+                <Stack gap={2}>
+                    <Group gap={8} wrap={'nowrap'} title={'Starting Chips'}>
+                        {/* Fixed width label (e.g., 45px) ensures alignment */}
+                        <Text size={'xs'} c={'dimmed'} fw={700} w={45}>CHIPS</Text>
+                        <Text size={'sm'} w={20} ta={'center'}>{sector.startingChips}</Text>
+                    </Group>
+                    <Group gap={8} wrap={'nowrap'} title={'Competition Dice'}>
+                        <Text size={'xs'} c={'dimmed'} fw={700} w={45}>COMP</Text>
+                        <Text size={'sm'} w={20} ta={'center'}>{sector.competitionUndercutDice}</Text>
+                    </Group>
+                </Stack>
+            </Table.Td>
 
-            <td className="col-price">
-                {formatPriceIndex(sector.priceIndex)}
-            </td>
+            <Table.Td ta={'center'}>
+                <Text fw={500}>
+                    {formatPriceIndex(sector.priceIndex)}
+                </Text>
+            </Table.Td>
 
-            <td className="col-actions">
+            <Table.Td width={'380'}>
                 <ActionSelector
                     onApply={(action, mag) => onAction(sector.id, action, mag)}
                     disabled={isBusy}
                 />
-            </td>
-        </tr>
+            </Table.Td>
+        </Table.Tr>
     );
 }

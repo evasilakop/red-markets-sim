@@ -1,30 +1,47 @@
-import {useEffect, useState} from 'react';
-import {type Message, messageService} from '../services/messageService';
-import type {MessageScope} from "../common/types.ts";
+import { notifications } from '@mantine/notifications';
 
-export const useMessages = (scope: MessageScope) => {
-    const [messages, setMessages] = useState<Message[]>([]);
+export function useMessages() {
 
-    useEffect(() => {
-        const unsubscribe = messageService.subscribe((allMessages) => {
-            const scopedMessages = allMessages.filter(msg => msg.scope === scope);
-            setMessages(scopedMessages);
+    const showSuccess = (message: string) => {
+        notifications.show({
+            title: 'Success',
+            position: 'top-right',
+            message: message,
+            color: 'green',
+            autoClose: 4000,
+            withCloseButton: true,
         });
-
-        // Get initial messages for this scope
-        const initialMessages = messageService.getMessages().filter(msg => msg.scope === scope);
-        setMessages(initialMessages);
-
-        return unsubscribe;
-    }, [scope]);
-
-    return {
-        messages,
-        showSuccess: (text: string, duration?: number) => messageService.show('success', text, scope, duration),
-        showError: (text: string, duration?: number) => messageService.show('error', text, scope, duration),
-        showWarning: (text: string, duration?: number) => messageService.show('warning', text, scope, duration),
-        dismiss: (id: string) => messageService.dismiss(id),
-        clear: () => messageService.clear(),
-        clearScope: () => messageService.clearScope(scope)
     };
-};
+
+    const showError = (message: string) => {
+        notifications.show({
+            title: 'Error',
+            position: 'top-right',
+            message: message,
+            color: 'red',
+            autoClose: false, // Errors stay until dismissed
+            withCloseButton: true,
+        });
+    };
+
+    const showWarning = (message: string) => {
+        notifications.show({
+            title: 'Warning',
+            position: 'top-right',
+            message: message,
+            color: 'orange',
+            autoClose: 6000,
+
+        });
+    };
+
+    // 'messages' and 'dismiss' are no longer needed by components,
+    // but if you have code relying on them, you might need to return dummy values
+    // or refactor the consumers.
+    // For now, let's return the methods we actually use.
+    return {
+        showSuccess,
+        showError,
+        showWarning
+    };
+}

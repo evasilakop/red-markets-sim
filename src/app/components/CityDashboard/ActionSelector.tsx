@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { type ActionType } from '../../common/types';
-import { ACTION_OPTIONS } from "../../common/constants.ts";
+import React, {useState} from 'react';
+import {type ActionType} from '../../common/types';
+import {ACTION_OPTIONS} from '../../common/constants';
+import {Button, Group, NumberInput, Select} from '@mantine/core';
 
 interface ActionSelectorProps {
     onApply: (action: ActionType, magnitude: number) => void;
@@ -8,55 +9,54 @@ interface ActionSelectorProps {
 }
 
 export default function ActionSelector({ onApply, disabled = false }: ActionSelectorProps) {
-    const [selectedAction, setSelectedAction] = useState<ActionType>('MARKET');
-    const [magnitude, setMagnitude] = useState(1);
-
-    /*
-    =====================================================================
-                              Event handlers
-    =====================================================================
-     */
+    // Note: Select value can be null, so we default to the first option
+    const [selectedAction, setSelectedAction] = useState<string>('MARKET');
+    const [magnitude, setMagnitude] = useState<number | string>(1);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onApply(selectedAction, magnitude);
+        // Cast back to ActionType safely
+        if (selectedAction) {
+            onApply(selectedAction as ActionType, Number(magnitude));
+        }
     };
 
-    /*
-    =====================================================================
-                                Render
-    =====================================================================
-    */
     return (
-        <form onSubmit={handleSubmit} className="action-form">
-            <select
-                className="action-select"
-                value={selectedAction}
-                onChange={(e) => setSelectedAction(e.target.value as ActionType)}
-                disabled={disabled}
-            >
-                {ACTION_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-            </select>
+        <form onSubmit={handleSubmit}>
+            <Group gap={"xs"} wrap={"nowrap"}>
+                {/* 1. The Dropdown */}
+                <Select
+                    data={ACTION_OPTIONS}
+                    value={selectedAction}
+                    onChange={(val) => val && setSelectedAction(val)}
+                    disabled={disabled}
+                    allowDeselect={false} // Prevent clearing the selection
+                    w={160} // Fixed width so it doesn't jump around
+                    size={'sm'}
+                />
 
-            <input
-                className="action-input"
-                type="number"
-                min={0}
-                max={10}
-                value={magnitude}
-                onChange={(e) => setMagnitude(Number(e.target.value))}
-                disabled={disabled}
-            />
+                {/* 2. The Magnitude Input */}
+                <NumberInput
+                    min={0}
+                    max={10}
+                    value={magnitude}
+                    onChange={setMagnitude}
+                    disabled={disabled}
+                    w={60} // Small fixed width for the number
+                    size={'sm'}
+                />
 
-            <button
-                type="submit"
-                className="btn btn-primary action-btn"
-                disabled={disabled}
-            >
-                Apply
-            </button>
+                {/* 3. The Apply Button */}
+                <Button
+                    type={'submit'}
+                    size={'sm'}
+                    disabled={disabled}
+                    variant={'filled'}
+                    color={'gray'}
+                >
+                    Apply
+                </Button>
+            </Group>
         </form>
     );
 }

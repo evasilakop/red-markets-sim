@@ -120,5 +120,4 @@ export type OperationResult = {
 ====================================================
  */
 
-export type MessageScope = 'world' | 'city' | 'sector' | 'settings';
 export type MessageType = 'success' | 'warning' | 'error';

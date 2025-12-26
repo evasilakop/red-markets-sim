@@ -3,19 +3,13 @@ import {useSimWorker} from '../../hooks/useSimWorker';
 import {db} from '../../services/db';
 import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
-import './CityDashboard.css';
+import {Button, Group, Paper, Table, Text, Title} from "@mantine/core";
 
 interface CityDashboardProps {
     cityId: string | null;
 }
 
-/**
- * The main dashboard component for a city's economy.
- * Connects the reactive data layer (Dexie) with the simulation layer (Web Worker).
- *
- * @param props - Component props containing the cityId.
- */
-export default function CityDashboard({cityId}: CityDashboardProps) {
+export function CityDashboard({cityId}: CityDashboardProps) {
     const data = useCityData(cityId);
     const {busy, tick, applyActions} = useSimWorker();
 
@@ -83,9 +77,9 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
     };
 
     if (!cityId) return null;
-    if (data === undefined) return <div className="dashboard-loading">Loading market
-        data...</div>;
-    if (data === null) return <div className="dashboard-error">City not found.</div>;
+    if (data === undefined) return <Group className="dashboard-loading">Loading market
+        data...</Group>;
+    if (data === null) return <Group className="dashboard-error">City not found.</Group>;
     const {city, sectors} = data;
 
     /*
@@ -94,48 +88,46 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
     =====================================================================
     */
     return (
-        <div className="city-dashboard">
+        <Paper shadow={'xs'} p={'md'} withBorder m={'md'}>
             {/* Header Section */}
-            <div className="dashboard-header">
-                <h2>{city.name} Market</h2>
-                <div className="dashboard-controls">
-                    <span className="last-tick">
+            <Group justify={'space-between'} align={'center'} w={'100%'}>
+                <Title order={2}>{city.name} Market</Title>
+                <Group>
+                    <Text size={'sm'} c={'dimmed'}>
                         Last Update: {new Date(city.lastTick).toLocaleTimeString()}
-                    </span>
-                    <button
+                    </Text>
+                    <Button
                         onClick={handleTick}
-                        className="btn btn-warning tick-btn"
                         disabled={busy} // Disable while worker is thinking
-                    >
-                        {busy ? 'Simulating...' : '⏱ Advance Time (Tick)'}
-                    </button>
-                </div>
-            </div>
+                    >Advance Time (Tick)
+                    </Button>
+                </Group>
+            </Group>
 
             {/* Main Sector Table */}
-            <table className="dashboard-table">
-                <thead>
-                <tr>
-                    <th className="col-type">Sector</th>
-                    <th className="col-bar">Supply</th>
-                    <th className="col-bar">Demand</th>
-                    <th className="col-state">State</th>
-                    <th className="col-stats">Stats</th>
-                    <th className="col-price">Price</th>
-                    <th className="col-actions">Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {sectors.map(sector => (
-                    <SectorRow
-                        key={sector.id}
-                        sector={sector}
-                        onAction={handleAction}
-                        isBusy={busy} // Pass busy state down to disable inputs
-                    />
-                ))}
-                </tbody>
-            </table>
-        </div>
+            <Table striped highlightOnHover={true} stickyHeader withRowBorders={false}>
+                <Table.Thead>
+                    <Table.Tr >
+                        <Table.Th ta={'center'}>Sector</Table.Th>
+                        <Table.Th ta={'center'}>Supply</Table.Th>
+                        <Table.Th ta={'center'}>Demand</Table.Th>
+                        <Table.Th ta={'center'}>State</Table.Th>
+                        <Table.Th ta={'center'}>Stats</Table.Th>
+                        <Table.Th ta={'center'}>Price</Table.Th>
+                        <Table.Th ta={'center'}>Actions</Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {sectors.map(sector => (
+                        <SectorRow
+                            key={sector.id}
+                            sector={sector}
+                            onAction={handleAction}
+                            isBusy={busy} // Pass busy state down to disable inputs
+                        />
+                    ))}
+                </Table.Tbody>
+            </Table>
+        </Paper>
     );
 }

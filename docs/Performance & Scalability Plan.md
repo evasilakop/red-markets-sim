@@ -1,8 +1,8 @@
-### 🚀 Performance Plan & Scale Targets
+### Performance Plan & Scale Targets
 
 As the simulation grows, maintaining a responsive UI (60fps) while handling complex state calculations is critical. This plan defines our scaling limits and the specific engineering tactics to support them.
 
-#### 🎯 Scale Targets
+#### Scale Targets
 
 We aim to support the following data volumes without UI degradation on an average consumer laptop:
 
@@ -18,7 +18,7 @@ We aim to support the following data volumes without UI degradation on an averag
 *   **Tick Processing:** < 50ms per tick cycle to allow ample idle time for the main thread.
 *   **Startup Time:** < 1.5s to interactive state (IndexedDB hydration).
 
-#### 🛠️ Optimization Tactics
+#### Optimization Tactics
 
 We will apply optimizations in phases based on complexity and necessity.
 
@@ -44,7 +44,7 @@ We will apply optimizations in phases based on complexity and necessity.
     *   *Strategy:* Use `react-window` or `react-virtualized` for the City and Sector lists.
     *   *Why:* If we exceed 100+ items, the DOM nodes themselves become the bottleneck. Virtualization only renders the items currently visible in the viewport.
 
-#### 📚 Resources & References
+#### Resources & References
 
 For implementation details, refer to these standard patterns:
 

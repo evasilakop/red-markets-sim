@@ -1,9 +1,9 @@
-Per-world snapshot timeline (rollback/undo) — Summary
+## Per-world snapshot timeline (rollback/undo)
 
-Concept
+### Concept
 - Maintain a single timeline of full “world” snapshots. Each snapshot captures all cities and their sectors at a point in time. Restoring a snapshot reverts the entire world atomically, preserving cross-city consistency.
 
-When to snapshot
+### When to snapshot
 - Before any operation that can change state:
   - Apply actions (any city/sector)
   - Tick (advance time) — especially “tick all”
@@ -11,44 +11,44 @@ When to snapshot
   - Optional: before/after user edits to priceIndex (if you want granular undo)
 - Label snapshots for clarity: “before actions (KC, Food/Water)”, “before tick all”, “before import”.
 
-Storage
+### Storage
 - WorldSnapshots table: { id, worldId, timestamp, label, payloadJSON }
   - payloadJSON contains a compact bundle: { cities: [...], sectors: [...] } for the entire world
 - Retention: keep last N snapshots per world (e.g., 20–50), prune FIFO
 - Size: still manageable (dozens of cities × 10 sectors = small JSON); consider compressing for very large worlds later
 
-Atomicity and consistency
+### Atomicity and consistency
 - Snapshot and restore are atomic at the world level:
   - Take snapshot in one transaction (read all, write snapshot)
   - Restore in one transaction (replace all cities/sectors with snapshot payload)
 - This ensures changes in one city that affect others are rolled back together
 
-UI/UX
+### UI/UX
 - Undo button (global, within a world): restores the most recent snapshot for that world
 - History panel (per world): list snapshots with timestamp and label; select one to restore
 - Confirm restore; on restore, create a new snapshot labeled “after restore” to enable redo
 - Indicate scope: “Restores the entire world to the selected point in time”
 
-Interaction with user/inferred priceIndex
+### Interaction with user/inferred priceIndex
 - User priceIndex values are part of snapshots; restoring reverts them exactly
 - If you have “inferred priceIndex” enabled, recompute inferences after restore for sectors with source='inferred'; leave source='user' values intact
 
-Performance
+### Performance
 - Use bulk reads/writes for snapshot/restore (one transaction)
 - Avoid snapshot spam: coalesce multiple small edits into one snapshot (e.g., snapshot once per “Apply” click, not per keystroke)
 - Retention keeps storage bounded
 
-Export/Import
+### Export/Import
 - Default: exclude history from exports to keep files small
 - Optional: “Export with history” toggle (document larger file size)
 - On import without history, start a fresh timeline from the imported state (create a baseline snapshot)
 
-Documentation notes
+### Documentation notes
 - Scope: per-world, not per-city; ensures coherent rollbacks across interdependent cities
 - Limitations: No partial restore (by design); to change one city without affecting others, operate without restoring history
 - Safety: Restores are additive to the timeline (you can redo forward)
 
-Acceptance criteria
+### Acceptance criteria
 - World-level Undo restores the previous snapshot atomically across all cities/sectors
 - History panel allows selecting and restoring any prior snapshot for the world
 - Snapshot taken before every mutating operation; labeled clearly

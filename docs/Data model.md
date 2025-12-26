@@ -78,6 +78,3 @@ Goals
 - Starting CHIPS: per Red Markets rules, derived from equilibrium; used for contract negotiation setup
 - Competition undercut dice: negative dice representing market competition penalty; 0 means no competition
 - Price index: display-only multiplier to visualize relative price pressure; not a rules artifact
-- Or start scaffolding the project and implement the data layer exactly to this model, then the simulation engine.
-
-If you want, I can draft the Simulation rules section next (short and precise, ready to paste).
