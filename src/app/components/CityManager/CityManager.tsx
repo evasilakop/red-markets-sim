@@ -2,7 +2,7 @@ import {useCallback, useEffect, useState} from 'react';
 import {addCity, listCities, removeCity} from '../../services/worldService.ts';
 import type {City, World} from '../../common/types.ts';
 import {useMessages} from '../../hooks/useMessages.ts';
-import {Button, Group, Paper, Stack, Text, TextInput, Title} from '@mantine/core';
+import {Button, Chip, Group, Paper, Stack, Text, TextInput, Title} from '@mantine/core';
 import {modals} from '@mantine/modals';
 
 /**
@@ -193,16 +193,25 @@ export default function CityManager({
 
                     {cities.length > 0 ? (
                         <Group>
-                            {cities.map(city => (
-                                <Button size={'xs'}
-                                        variant={selectedCity?.id === city.id ? 'filled' : 'outline'}
-                                        color={'teal'}
-                                        key={city.id}
-                                        onClick={() => onCitySelect(city)}
-                                >
-                                    {city.name}
-                                </Button>
-                            ))}
+                            <Chip.Group
+                                multiple={false}
+                                value={selectedCity?.id}
+                                onChange={(val) => {
+                                    if (!val) return; // doesn't allow deselection
+                                    const city = cities.find(c => c.id === val);
+                                    if (city) onCitySelect(city);
+                                }}
+                            >
+                                {cities.map(city => (
+                                    <Chip key={city.id}
+                                          value={city.id}
+                                          size={'sm'}
+                                          color={'cyan'}
+                                    >
+                                        {city.name}
+                                    </Chip>
+                                ))}
+                            </Chip.Group>
                         </Group>
                     ) : (
                         <Text>

@@ -33,6 +33,7 @@ export default function ActionSelector({ onApply, disabled = false }: ActionSele
                     allowDeselect={false} // Prevent clearing the selection
                     w={160} // Fixed width so it doesn't jump around
                     size={'sm'}
+                    aria-label={'Select Action'}
                 />
 
                 {/* 2. The Magnitude Input */}
@@ -44,6 +45,7 @@ export default function ActionSelector({ onApply, disabled = false }: ActionSele
                     disabled={disabled}
                     w={60} // Small fixed width for the number
                     size={'sm'}
+                    aria-label={'Magnitude'}
                 />
 
                 {/* 3. The Apply Button */}
