@@ -1,15 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import '../app/components/CityDashboard/CityDashboard';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import CityDashboard from '../app/components/CityDashboard/CityDashboard';
 import type { CityData } from '../app/hooks/useCityData';
 import { MantineProvider } from '@mantine/core';
-import CityDashboard from "../app/components/CityDashboard/CityDashboard.tsx";
 
-// 1. Import Provider
-const mockTick = vi.fn();
-const mockApplyActions = vi.fn();
+// 1. HOIST the mocks so they exist before vi.mock runs
+const { mockUseCityData, mockTick, mockApplyActions } = vi.hoisted(() => ({
+    mockUseCityData: vi.fn(),
+    mockTick: vi.fn(),
+    mockApplyActions: vi.fn()
+}));
 
-vi.mock('../../hooks/useSimWorker', () => ({
+// 2. Mock Hooks using the hoisted variables
+vi.mock('../app/hooks/useSimWorker', () => ({
     useSimWorker: () => ({
         busy: false,
         tick: mockTick,
@@ -17,14 +20,16 @@ vi.mock('../../hooks/useSimWorker', () => ({
     })
 }));
 
-const mockUseCityData = vi.fn();
-vi.mock('../../hooks/useCityData', () => ({
+vi.mock('../app/hooks/useCityData', () => ({
     useCityData: (id: string | null) => mockUseCityData(id)
 }));
 
-vi.mock('../../services/db', () => ({
+vi.mock('../app/services/db', () => ({
     db: {
-        transaction: vi.fn((_mode, _tables, callback) => callback()),
+        transaction: vi.fn(async (...args) => {
+            const callback = args[args.length - 1]; // The last arg is the function
+            return await callback();
+        }),
         sectors: { bulkPut: vi.fn() },
         cities: { update: vi.fn() }
     }
@@ -68,7 +73,7 @@ describe('CityDashboard', () => {
         expect(screen.queryByText('FOOD & WATER')).not.toBeNull();
     });
 
-    it('calls tick function when Advance Time is clicked', () => {
+    it('calls tick function when Advance Time is clicked', async () => {
         const mockData: CityData = {
             city: { id: 'c1', worldId: 'w1', name: 'Test City', lastTick: Date.now() },
             sectors: []
@@ -83,6 +88,9 @@ describe('CityDashboard', () => {
         const tickBtn = screen.getByRole('button', { name: /Advance Time/i });
         fireEvent.click(tickBtn);
 
-        expect(mockTick).toHaveBeenCalled();
+        // Wait for the async action to be called
+        await waitFor(() => {
+            expect(mockTick).toHaveBeenCalled();
+        });
     });
 });

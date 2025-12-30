@@ -23,6 +23,28 @@ export function competitionDiceFor(eq: Equilibrium) {
 
 const clamp = (x: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, x));
 
+// helper function to apply noise to the simulated actions
+function applyNoise(sector: Sector): Sector {
+    let { supply, demand } = sector;
+
+    // Apply ambient noise (-2 to +2)
+    supply = clamp(supply + Math.floor(Math.random() * 5) - 2);
+    demand = clamp(demand + Math.floor(Math.random() * 5) - 2);
+
+    // Re-derive equilibrium after noise
+    const equilibrium = deriveEquilibrium(supply, demand, sector.equilibrium);
+
+    return {
+        ...sector,
+        supply,
+        demand,
+        equilibrium,
+        startingChips: chipsFor(equilibrium),
+        competitionUndercutDice: competitionDiceFor(equilibrium),
+        updatedAt: Date.now()
+    };
+}
+
 export function applyActionToSector(sector: Sector, action: UserAction): Sector {
     let supply = sector.supply;
     let demand = sector.demand;
@@ -62,17 +84,11 @@ export function applyActionToSector(sector: Sector, action: UserAction): Sector 
     supply = clamp(supply);
     demand = clamp(demand);
 
-    // Apply ambient noise (small random drift)
-    supply = clamp(supply + Math.floor(Math.random() * 5) - 2); // -2 to +2
-    demand = clamp(demand + Math.floor(Math.random() * 5) - 2); // -2 to +2
-
     // Derive new equilibrium and related values
     const equilibrium = deriveEquilibrium(supply, demand, sector.equilibrium);
 
     return {
-        // copy all the properties from the original object: create a new object, compare it to the old one, and re-render if needed
         ...sector,
-        // but override with new values for the following variables
         supply,
         demand,
         equilibrium,
@@ -82,11 +98,8 @@ export function applyActionToSector(sector: Sector, action: UserAction): Sector 
     };
 }
 
+
 export function tickSector(sector: Sector): Sector {
-    // Just apply ambient noise and re-derive equilibrium
-    return applyActionToSector(sector, {
-        sector: sector.type,
-        type: 'PRICE_LOW',
-        magnitude: 0
-    });
+    // Tick now EXPLICITLY applies noise
+    return applyNoise(sector);
 }

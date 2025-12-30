@@ -25,5 +25,9 @@
     "noUncheckedSideEffectImports": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "node_modules/vitest/globals.d.ts",
+    "node_modules/@types/node/globals.d.ts"
+  ]
 }
