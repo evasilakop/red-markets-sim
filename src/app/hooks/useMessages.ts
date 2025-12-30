@@ -35,10 +35,6 @@ export function useMessages() {
         });
     };
 
-    // 'messages' and 'dismiss' are no longer needed by components,
-    // but if you have code relying on them, you might need to return dummy values
-    // or refactor the consumers.
-    // For now, let's return the methods we actually use.
     return {
         showSuccess,
         showError,

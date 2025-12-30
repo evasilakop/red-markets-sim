@@ -59,12 +59,6 @@ export const checkBrowserSupport = (): { supported: boolean; missingFeatures: st
  *
  * @param bytes - File size in bytes
  * @returns Formatted string like "1.5 MB" or "512 KB"
- *
- * @example
- * ```typescript
- * formatFileSize(1536) // "1.5 KB"
- * formatFileSize(0)    // "0 Bytes"
- * ```
  */
 export const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -84,16 +78,6 @@ export const formatFileSize = (bytes: number): string => {
  * @param bundle - The parsed JSON object to validate
  * @returns Error message string if validation fails, null if valid
  *
- * @example
- * ```typescript
- * const bundle = JSON.parse(fileContent);
- * const error = validateWorldBundle(bundle);
- * if (error) {
- *   console.error('Invalid world file:', error);
- * } else {
- *   // Safe to import
- * }
- * ```
  */
 export function validateWorldBundle(bundle: any): string | null {
     // Check basic structure
