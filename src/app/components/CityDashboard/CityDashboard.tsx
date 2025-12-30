@@ -77,9 +77,9 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
     };
 
     if (!cityId) return null;
-    if (data === undefined) return <Group className="dashboard-loading">Loading market
+    if (data === undefined) return <Group>Loading market
         data...</Group>;
-    if (data === null) return <Group className="dashboard-error">City not found.</Group>;
+    if (data === null) return <Group>City not found.</Group>;
     const {city, sectors} = data;
 
     /*
@@ -98,7 +98,7 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
                     </Text>
                     <Button
                         onClick={handleTick}
-                        disabled={busy} // Disable while worker is thinking
+                        loading={busy} // Disable while worker is thinking
                     >Advance Time (Tick)
                     </Button>
                 </Group>
