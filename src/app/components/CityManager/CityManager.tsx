@@ -169,10 +169,11 @@ export default function CityManager({
             {selectedWorld && (
                 <Stack>
                     <Group justify={'space-between'}>
-                        <Title order={3}>Cities in {selectedWorld.name}</Title>
+                        <Title order={2}>Cities in {selectedWorld.name}</Title>
                         <Group>
                             <Button size={'compact-lg'}
-                                    color={'green'}
+                                    color={'green.9'}
+                                    c={'white'}
                                     variant={'filled'}
                                     onClick={handleAddCity}>
                                 Add City

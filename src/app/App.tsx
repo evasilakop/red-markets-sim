@@ -10,7 +10,7 @@ import WorldLobby from './components/WorldManager/WorldLobby';
 type ViewMode = 'LOBBY' | 'APP';
 
 export default function App() {
-    const [viewMode, setViewMode] = useState<ViewMode>('APP');
+    const [viewMode] = useState<ViewMode>('APP');
     const [selectedWorld, setSelectedWorld] = useState<World | null>(null);
     const [selectedCity, setSelectedCity] = useState<City | null>(null);
 
@@ -39,7 +39,7 @@ export default function App() {
                         left: '50%',
                         top: '50%',
                         transform: 'translate(-50%, -50%)'
-                    }}>
+                    }}> {/*
                         <Button
                             size={'xs'}
                             variant={'light'}
@@ -47,7 +47,7 @@ export default function App() {
                             onClick={() => setViewMode('LOBBY')}
                         >
                             Try Lobby Mode
-                        </Button>
+                        </Button>*/}
                     </div>
                 </AppShell.Header>
 
@@ -72,7 +72,7 @@ export default function App() {
             {!selectedWorld ? (
                 <>
                     {/* CENTERED TOGGLE BUTTON */}
-                    <div style={{
+                    {/*<div style={{
                         position: 'absolute',
                         top: 20,
                         left: '50%',
@@ -83,7 +83,7 @@ export default function App() {
                             Try App Mode
                         </Button>
                     </div>
-
+*/}
                     <WorldLobby onWorldSelect={handleWorldSelect} />
                 </>
             ) : (
@@ -95,10 +95,11 @@ export default function App() {
                             ← Back to Lobby
                         </Button>
 
-                        {/* Center the toggle here too? or keep it right? */}
+                        {/* Center the toggle here too? or keep it right?
                         <Button onClick={() => setViewMode('APP')}>
                             Try App Mode
                         </Button>
+                        */}
                     </Group>
 
                     <CityManager

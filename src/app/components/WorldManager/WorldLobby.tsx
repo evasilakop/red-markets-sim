@@ -82,7 +82,7 @@ export default function WorldLobby({ onWorldSelect }: WorldLobbyProps) {
     return (
         <Container size={'lg'} py={'xl'}>
             <Stack align={'center'} mb={50}>
-                <Title order={1} size={48} fw={900}>RED MARKETS SIM</Title>
+                <Title order={1} size={48} fw={900}>RED MARKETS SIMULATOR</Title>
                 <Text c={'dimmed'} size={'lg'}>Select a campaign to begin
                     simulation</Text>
             </Stack>

@@ -8,7 +8,16 @@ import {
     importWorld,
     listWorlds
 } from '../../services/worldService';
-import {Box, Button, FileButton, Group, Menu, Select, TextInput} from '@mantine/core';
+import {
+    Box,
+    Button,
+    FileButton,
+    Group,
+    Menu,
+    Select,
+    TextInput,
+    Title
+} from '@mantine/core';
 import {modals} from '@mantine/modals';
 
 interface WorldManagerProps {
@@ -125,7 +134,7 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: WorldManager
 
             {/* LEFT: Logo & Switcher (Always Visible) */}
             <Group>
-                <div style={{fontWeight: 900, fontSize: 20}}>RMS</div>
+                <Title order={1}>RMS</Title>
                 {/* Shortened Logo for mobile */}
                 <Select
                     placeholder={'World...'}
@@ -140,8 +149,14 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: WorldManager
                     nothingFoundMessage={'No world found'}
                     allowDeselect={false}
                 />
-                <Button variant={'light'} onClick={openCreateModal} p={0}
-                        w={30}>+</Button>
+                <Button variant={'light'}
+                        onClick={openCreateModal}
+                        p={0}
+                        w={30}
+                        aria-label="Create New World"
+                >
+                    +
+                </Button>
             </Group>
 
             {/* RIGHT: Desktop Actions (Visible on SM+) */}
@@ -166,7 +181,11 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: WorldManager
             <Box hiddenFrom={'sm'}>
             <Menu shadow={'md'} width={200}>
                 <Menu.Target>
-                    <Button variant={'subtle'}>☰</Button>
+                    <Button variant={'subtle'}
+                            aria-label="Open Menu"
+                    >
+                        ☰
+                    </Button>
                 </Menu.Target>
 
                 <Menu.Dropdown>
