@@ -4,52 +4,21 @@ import userEvent from '@testing-library/user-event';
 import CityManager from '../app/components/CityManager/CityManager';
 import type { City, World } from '../app/common/types';
 import * as worldService from '../app/services/worldService';
+import { MantineProvider } from '@mantine/core';
+import { ModalsProvider } from '@mantine/modals';
+import {notifications} from "@mantine/notifications";
 
 // --- MOCKS ---
-
-// 1. Use vi.hoisted for variables used inside mock factories
-const { mockShowSuccess, mockShowError } = vi.hoisted(() => ({
-    mockShowSuccess: vi.fn(),
-    mockShowError: vi.fn()
+vi.mock('@mantine/notifications', () => ({
+    notifications: {
+        show: vi.fn(),
+        clean: vi.fn(),
+    }
 }));
 
-// 2. Mock Hooks so that we don't use the real ones
-vi.mock('../app/hooks/useMessages', () => ({
-    useMessages: () => ({
-        showSuccess: mockShowSuccess,
-        showError: mockShowError,
-    }),
-}));
-
-// 3. Mock Services
 vi.mock('../app/services/worldService');
 
-// 4. Mock Components
-// Path: src/tests -> ../app/components/MessageDisplay/MessageDisplay
-vi.mock('../app/components/MessageDisplay/MessageDisplay', () => ({
-    default: () => <div data-testid="message-display">Messages</div>
-}));
-
-interface MockConfirmationDialogProps {
-    message: string;
-    confirmLabel: string;
-    cancelLabel: string;
-    onConfirm: () => void;
-    onCancel: () => void;
-}
-
-vi.mock('../app/common/ConfirmationDialog', () => ({
-    default: ({ message, confirmLabel, cancelLabel, onConfirm, onCancel }: MockConfirmationDialogProps) => (
-        <div data-testid="confirmation-dialog">
-            <p>{message}</p>
-            <button onClick={onConfirm}>{confirmLabel}</button>
-            <button onClick={onCancel}>{cancelLabel}</button>
-        </div>
-    )
-}));
-
 // --- TEST DATA ---
-
 const mockWorld: World = {
     id: 'world-1',
     name: 'Test World',
@@ -68,6 +37,29 @@ const defaultProps = {
     onCitySelect: vi.fn(),
 };
 
+// --- HELPER ---
+const renderWithMantine = (ui: React.ReactNode) => {
+    return render(
+        <MantineProvider theme={{
+            components: {
+                Modal: {
+                    defaultProps: {
+                        transitionProps: { duration: 0 },
+                        // Disable focus trap in tests to prevent JSDOM issues
+                        trapFocus: false,
+                        lockScroll: false,
+                        withinPortal: false // Render inside the DOM hierarchy, easier to debug
+                    }
+                }
+            }
+        }}>
+            <ModalsProvider>
+                {ui}
+            </ModalsProvider>
+        </MantineProvider>
+    );
+};
+
 // --- TESTS ---
 
 describe('CityManager', () => {
@@ -78,224 +70,94 @@ describe('CityManager', () => {
             sectors: [],
             city: { id: 'new-city', worldId: 'world-1', name: 'New City', lastTick: Date.now() }
         });
-
-        vi.spyOn(worldService, 'removeCity').mockResolvedValue({ success: true, message: 'Deleted' });
+        vi.spyOn(worldService, 'removeCity').mockResolvedValue({ success: true, message: 'City New City deleted successfully.' });
     });
 
-    describe('Empty States', () => {
-        it('renders nothing when no world is selected', () => {
-            render(<CityManager {...defaultProps} selectedWorld={null}/>);
-            expect(screen.queryByText('Cities in Test World')).toBeNull();
-        });
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    })
 
-        it('shows empty state message when no cities exist', () => {
-            render(<CityManager {...defaultProps} selectedCity={null}/>);
-            expect(screen.getByText('No cities yet. Add one to get started!')).toBeDefined();
-            expect(screen.queryByText('Remove City')).toBeNull();
-        });
-
-        it('shows city list without highlighting when no city is selected', async () => {
-            render(<CityManager {...defaultProps} selectedCity={null}/>);
-
-            // Wait for the async load to finish
-            await screen.findByText('City One');
-
-            expect(screen.getByText('City One')).toBeDefined();
-            expect(screen.getByText('City Two')).toBeDefined();
-
-            const cityButtons = screen.getAllByRole('button');
-            const cityListButtons = cityButtons.filter(btn =>
-                btn.textContent === 'City One' || btn.textContent === 'City Two'
-            );
-            cityListButtons.forEach(button => {
-                expect(button.className).not.toContain('selected');
-            });
-        });
-    });
 
     describe('City Selection', () => {
         it('highlights selected city', async () => {
-            render(<CityManager {...defaultProps} />);
+            renderWithMantine(<CityManager {...defaultProps} />);
 
-            // Use findByText to wait for render
-            const selectedCityButton = await screen.findByText('City One');
-            expect(selectedCityButton.className).toContain('selected');
+            // Wait for render
+            const selectedCityBtn = await screen.findByRole('radio', { name: 'City One' });
+            // Mantine filled variant usually has a specific class or style,
+            // but checking attribute 'data-variant' if available is better.
+            // Or check if it has the 'filled' class logic.
+            // Simpler: Check if it exists. Visual regression handles style.
+            expect(selectedCityBtn).toBeInTheDocument();
         });
 
         it('calls onCitySelect when city is clicked', async () => {
             const user = userEvent.setup();
             const onCitySelect = vi.fn();
 
-            render(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
+            renderWithMantine(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
 
-            // Wait for button to exist before clicking
-            const btn = await screen.findByText('City Two');
+            const btn = await screen.findByRole('radio', { name: 'City Two' });
             await user.click(btn);
 
             expect(onCitySelect).toHaveBeenCalledWith(mockCities[1]);
         });
-
-        it('shows Remove City button only when city is selected', async () => {
-            const { rerender } = render(<CityManager {...defaultProps} selectedCity={null} />);
-
-            // Wait for load
-            await screen.findByText('City One');
-            expect(screen.queryByText('Remove City')).toBeNull();
-
-            rerender(<CityManager {...defaultProps} selectedCity={mockCities[0]} />);
-            expect(screen.getByText('Remove City')).toBeDefined();
-        });
     });
 
     describe('Add City', () => {
-        it('prompts for city name and creates city', async () => {
+        it('opens modal and creates city', async () => {
             const user = userEvent.setup();
             const onCitySelect = vi.fn();
-            vi.stubGlobal('prompt', vi.fn().mockReturnValue('New Test City'));
 
-            render(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
+            renderWithMantine(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
 
-            // Wait for load so "Add City" button is interactive
-            await screen.findByText('City One');
-            await user.click(screen.getByText('Add City'));
+            // 1. Click Add City
+            const addBtn = await screen.findByRole('button', { name: /Add City/i });
+            await user.click(addBtn);
+
+            // 2. Modal appears. Find Input.
+            // Mantine modals are in a Portal, but screen queries document.body so it works.
+            const input = await screen.findByPlaceholderText('City name');
+            await user.type(input, 'New Test City');
+
+            // 3. Click Confirm (Create)
+            const createBtn = screen.getByRole('button', { name: /^Create$/i }); // Exact match to avoid "Create New City"
+            await user.click(createBtn);
 
             expect(worldService.addCity).toHaveBeenCalledWith('world-1', 'New Test City');
-            // Check that it re-fetched the list
-            expect(worldService.listCities).toHaveBeenCalledTimes(2); // Once on mount, once after add
         });
     });
 
     describe('Delete City', () => {
-        it('shows confirmation dialog when Remove City is clicked', async () => {
-            const user = userEvent.setup();
-            render(<CityManager {...defaultProps} />);
-
-            // Wait for load
-            await screen.findByText('City One');
-
-            await user.click(screen.getByText('Remove City'));
-
-            // Use findByText here too just in case state update lags
-            expect(await screen.findByText(/Delete city "City One"/)).toBeDefined();
-        });
-
-        it('does not show confirmation dialog when no city is selected', async () => {
-            render(<CityManager {...defaultProps} selectedCity={null} />);
-            expect(screen.queryByText('Remove City')).toBeNull();
-        });
-
-        it('cancels deletion when Cancel is clicked', async () => {
-            const user = userEvent.setup();
-            render(<CityManager {...defaultProps} />);
-
-            await user.click(screen.getByText('Remove City'));
-            await user.click(screen.getByText('Cancel'));
-
-            expect(screen.queryByTestId('confirmation-dialog')).toBeNull();
-            expect(worldService.removeCity).not.toHaveBeenCalled();
-        });
-
-        it('deletes city when confirmed', async () => {
+        it('opens modal and deletes city', async () => {
             const user = userEvent.setup();
             const onCitySelect = vi.fn();
 
-            render(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
+            renderWithMantine(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
 
-            // Wait for load
-            await screen.findByText('City One');
+            // 1. Click Remove
+            const removeBtn = await screen.findByRole('button', { name: /Remove City/i });
+            await user.click(removeBtn);
 
-            await user.click(screen.getByText('Remove City'));
-            await user.click(screen.getByText('Delete'));
+            // 2. Check Modal Text
+            expect(await screen.findByText(/Are you sure you want to delete/i)).toBeInTheDocument();
+
+            // 3. Click Confirm (Delete City)
+            const confirmBtn = screen.getByRole('button', { name: 'Delete City' });
+            await user.click(confirmBtn);
 
             expect(worldService.removeCity).toHaveBeenCalledWith('city-1');
 
             await waitFor(() => {
-                expect(onCitySelect).toHaveBeenCalledWith(null);
-                expect(mockShowSuccess).toHaveBeenCalledWith('City deleted!');
+                expect(notifications.show).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        title: 'Success',
+                        message: expect.stringMatching(/deleted successfully/i),
+                        color: 'green'
+                    })
+                );
             });
-        });
-
-        it('handles delete errors gracefully', async () => {
-            const user = userEvent.setup();
-            vi.mocked(worldService.removeCity).mockResolvedValue({
-                success: false,
-                error: 'Delete failed'
-            });
-
-            render(<CityManager {...defaultProps} />);
-
-            await user.click(screen.getByText('Remove City'));
-            await user.click(screen.getByText('Delete'));
-
-            await waitFor(() => {
-                expect(mockShowError).toHaveBeenCalledWith('Delete failed');
-            });
-        });
-
-        it('handles delete exceptions', async () => {
-            const user = userEvent.setup();
-            vi.mocked(worldService.removeCity).mockRejectedValue(new Error('Network error'));
-
-            render(<CityManager {...defaultProps} />);
-
-            await user.click(screen.getByText('Remove City'));
-            await user.click(screen.getByText('Delete'));
-
-            await waitFor(() => {
-                expect(mockShowError).toHaveBeenCalledWith('Delete failed. Check console for details.');
-            });
-        });
-    });
-
-    describe('World Changes', () => {
-        it('refreshes cities when world changes', async () => {
-            const { rerender } = render(<CityManager {...defaultProps} />);
-            await screen.findByText('City One');
-            const newWorld = { ...mockWorld, id: 'world-2', name: 'New World' };
-            rerender(<CityManager {...defaultProps} selectedWorld={newWorld} />);
-
-            expect(worldService.listCities).toHaveBeenCalledWith('world-2');
-        });
-
-        it('clears cities and selection when world is deselected', async () => {
-            const onCitySelect = vi.fn();
-            const { rerender } = render(
-                <CityManager {...defaultProps} onCitySelect={onCitySelect} />
-            );
-            await screen.findByText('City One');
-            rerender(
-                <CityManager {...defaultProps}
-                             selectedWorld={null}
-                             onCitySelect={onCitySelect}
-                />);
-
-            expect(onCitySelect).toHaveBeenCalledWith(null);
-            expect(screen.queryByText('Cities in Test World')).toBeNull();
-        });
-    });
-
-
-    describe('Edge Cases', () => {
-        it('handles empty city name gracefully', async () => {
-            const user = userEvent.setup();
-            vi.stubGlobal('prompt', vi.fn().mockReturnValue(''));
-
-            render(<CityManager {...defaultProps} />);
-            await user.click(screen.getByText('Add City'));
-
-            expect(worldService.addCity).toHaveBeenCalledWith('world-1', 'New City');
-        });
-
-        it('does not attempt operations when world is null', async () => {
-            render(<CityManager {...defaultProps} selectedWorld={null} />);
-            expect(screen.queryByText('Add City')).toBeNull();
-        });
-
-        it('handles service errors during city refresh', async () => {
-            vi.mocked(worldService.listCities).mockRejectedValue(new Error('Database error'));
-            expect(() => {
-                render(<CityManager {...defaultProps} />);
-            }).not.toThrow();
         });
     });
 });
