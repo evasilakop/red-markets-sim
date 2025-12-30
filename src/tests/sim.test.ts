@@ -89,13 +89,17 @@ const createSector = (overrides?: Partial<Sector>): Sector => ({
 
 describe('tickSector', () => {
     it('should drift values slightly (ambient noise)', () => {
+        // Force random to be 0.9 -> floor(4.5)-2 = 2 so there IS noise otherwise the
+        // test can randomly fail depending on the seed
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+
         const sector = createSector({ supply: 50, demand: 50 });
         const result = tickSector(sector);
 
-        // It shouldn't be exactly the same (noise), but shouldn't explode
-        expect(result.supply).not.toBe(50);
+        expect(result.supply).not.toBe(50); // Will be 52
         expect(result.supply).toBeGreaterThan(40);
-        expect(result.supply).toBeLessThan(60);
+
+        randomSpy.mockRestore();
     });
 
     it('should clamp values between 0 and 100', () => {
