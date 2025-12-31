@@ -25,7 +25,7 @@ export default function SectorRow({ sector, onAction, isBusy = false }: SectorRo
                 size={'md'}
                 radius={'xl'}
                 style={{ flex: 1 }} // Take up remaining space
-                visibleFrom={'md'} // only visible when there is enough screen space
+                visibleFrom={'md'}  // only visible when there is enough screen space
                 aria-hidden={'true'}
             />
         </Group>

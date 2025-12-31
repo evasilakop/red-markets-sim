@@ -4,6 +4,7 @@ import {db} from '../../services/db';
 import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
 import {Button, Group, Paper, Table, Text, Title} from '@mantine/core';
+import {useMessages} from '../../hooks/useMessages.ts';
 
 interface CityDashboardProps {
     cityId: string | null;
@@ -12,6 +13,7 @@ interface CityDashboardProps {
 export default function CityDashboard({cityId}: CityDashboardProps) {
     const data = useCityData(cityId);
     const {busy, tick, applyActions} = useSimWorker();
+    const {showSuccess, showError} = useMessages();
 
     /*
     =====================================================================
@@ -32,13 +34,16 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
 
             // B. Save to DB (React will auto-update because of useCityData)
             // We also update the City's lastTick timestamp
+            // transaction: all or nothing. Either everything is done or everything fails
             await db.transaction('rw', db.sectors, db.cities, async () => {
                 await db.sectors.bulkPut(updatedSectors);
                 await db.cities.update(data.city.id, {lastTick: Date.now()});
+                showSuccess('World updated')
             });
 
         } catch (error) {
             console.error("Tick failed", error);
+            showError('Error applying tick');
             // In a real app, you might use a toast/snackbar here (floaty message
             // thingy, maybe add this to message service)
         }
@@ -73,12 +78,12 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
 
         } catch (error) {
             console.error("Action failed", error);
+            showError('Error applying action');
         }
     };
 
     if (!cityId) return null;
-    if (data === undefined) return <Group>Loading market
-        data...</Group>;
+    if (data === undefined) return <Group>Loading market data...</Group>;
     if (data === null) return <Group>City not found.</Group>;
     const {city, sectors} = data;
 
