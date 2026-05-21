@@ -3,17 +3,21 @@ import {useSimWorker} from '../../hooks/useSimWorker';
 import {db} from '../../services/db';
 import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
-import {Button, Group, Paper, Table, Text, Title} from '@mantine/core';
+import {Button, Group, Paper, Table, Text, Title, Slider} from '@mantine/core';
 import {useMessages} from '../../hooks/useMessages.ts';
+import {useState} from 'react';
+import {IconSettings} from '@tabler/icons-react';
 
 interface CityDashboardProps {
     cityId: string | null;
 }
 
-export default function CityDashboard({cityId}: CityDashboardProps) {
+export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
     const data = useCityData(cityId);
     const {busy, tick, applyActions} = useSimWorker();
     const {showSuccess, showError} = useMessages();
+    const [visibleRows, setVisibleRows] = useState(10);
+    const [showSettings, setShowSettings] = useState(false);
 
     /*
     =====================================================================
@@ -34,7 +38,6 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
 
             // B. Save to DB (React will auto-update because of useCityData)
             // We also update the City's lastTick timestamp
-            // transaction: all or nothing. Either everything is done or everything fails
             await db.transaction('rw', db.sectors, db.cities, async () => {
                 await db.sectors.bulkPut(updatedSectors);
                 await db.cities.update(data.city.id, {lastTick: Date.now()});
@@ -44,7 +47,7 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
         } catch (error) {
             console.error("Tick failed", error);
             showError('Error applying tick');
-            // In a real app, you might use a toast/snackbar here (floaty message
+            // In a real app, you might want to use a toast/snackbar here (floaty message
             // thingy, maybe add this to message service)
         }
     };
@@ -96,15 +99,42 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
         <Paper shadow={'xs'} p={'md'} withBorder m={'md'}>
             {/* Header Section */}
             <Group justify={'space-between'} align={'center'} w={'100%'}>
-                <Title order={2}>{city.name} Market</Title>
+                <Group justify={'left'} align={'center'}>
+                    <Title order={2}>{city.name} Market</Title>
+                    <Button
+                        variant={'subtle'}
+                        color={'gray'}
+                        onClick={() => setShowSettings(!showSettings)}
+                        aria-label={'City Dashboard Settings'}
+                        size={'compact-xs'}
+                    >
+                        <IconSettings size={20} />
+                    </Button>
+                    {showSettings && (
+                        <Group gap={'xs'} wrap={'nowrap'} align={'center'}>
+                            <Text size={'xs'} c={'dimmed'}>Table Size</Text>
+                            <Slider
+                                value={visibleRows}
+                                onChange={setVisibleRows}
+                                min={2}
+                                max={10}
+                                step={1}
+                                w={150}
+                                aria-label={'Adjust visible rows'}
+                            />
+                        </Group>
+                    )}
+                </Group>
                 <Group>
+
                     <Text size={'sm'} c={'dimmed'}>
                         Last Update: {new Date(city.lastTick).toLocaleTimeString()}
                     </Text>
                     <Button
                         onClick={handleTick}
                         loading={busy} // Disable while worker is thinking
-                    >Advance Time (Tick)
+                    >
+                        Advance Time (Tick)
                     </Button>
                 </Group>
             </Group>
@@ -125,7 +155,7 @@ export default function CityDashboard({cityId}: CityDashboardProps) {
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {sectors.map(sector => (
+                        {sectors.slice(0, visibleRows).map(sector => (
                             <SectorRow
                                 key={sector.id}
                                 sector={sector}
