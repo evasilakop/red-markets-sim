@@ -29,7 +29,7 @@ export default function CityManager({
                                         selectedWorld,
                                         selectedCity,
                                         onCitySelect
-                                    }: CityManagerProps) {
+                                    }: Readonly<CityManagerProps>) {
     const {showSuccess, showError} = useMessages();
     const [isDeleting, setIsDeleting] = useState(false);
     const [cities, setCities] = useState<City[]>([]);
@@ -49,7 +49,7 @@ export default function CityManager({
                 showError("Failed to load cities");
             }
         }
-    }, [onCitySelect, selectedCity, showError]);
+    }, [onCitySelect, showError]);
 
     // Handle World Changes safely
     useEffect(() => {
