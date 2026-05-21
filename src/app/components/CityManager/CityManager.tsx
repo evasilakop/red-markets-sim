@@ -1,9 +1,11 @@
-import {useCallback, useEffect, useState} from 'react';
-import {addCity, listCities, removeCity} from '../../services/worldService.ts';
+import {useEffect, useState} from 'react';
+import {addCity, removeCity} from '../../services/worldService.ts';
 import type {City, World} from '../../common/types.ts';
 import {useMessages} from '../../hooks/useMessages.ts';
 import {Button, Chip, Group, Paper, Stack, Text, TextInput, Title} from '@mantine/core';
 import {modals} from '@mantine/modals';
+import {useLiveQuery} from 'dexie-react-hooks';
+import {db} from '../../services/db';
 
 /**
  * Props for the CityManager component.
@@ -29,45 +31,32 @@ export default function CityManager({
                                         selectedWorld,
                                         selectedCity,
                                         onCitySelect
-                                    }: CityManagerProps) {
+                                    }: Readonly<CityManagerProps>) {
     const {showSuccess, showError} = useMessages();
     const [isDeleting, setIsDeleting] = useState(false);
-    const [cities, setCities] = useState<City[]>([]);
 
-    const refreshCities = useCallback(async (worldId: string, isActive: boolean) => {
-        try {
-            const cs = await listCities(worldId);
-            if (isActive) {
-                setCities(cs);
-                if (!selectedCity && cs.length > 0) {
-                    onCitySelect(cs[0]);
-                }
-            }
-        } catch (error) {
-            if (isActive) {
-                console.error("Failed to load cities", error);
-                showError("Failed to load cities");
-            }
-        }
-    }, [onCitySelect, selectedCity, showError]);
+    // Reactive subscription to cities in the selected world
+    const cities = useLiveQuery(
+        async () => {
+            if (!selectedWorld) return [];
+            const cs = await db.cities.where({worldId: selectedWorld.id}).toArray();
+            return cs.sort((a, b) => a.name.localeCompare(b.name));
+        },
+        [selectedWorld?.id]
+    );
 
-    // Handle World Changes safely
+    // Synchronize selection when cities list changes (e.g. auto-select first city)
     useEffect(() => {
-        let active = true;
-        if (selectedWorld) {
-            refreshCities(selectedWorld.id, active);
-        } else {
-            setCities([]);
+        if (cities && selectedWorld && !selectedCity && cities.length > 0) {
+            onCitySelect(cities[0]);
+        } else if (cities && !selectedWorld) {
             onCitySelect(null);
         }
-        return () => {
-            active = false;
-        };
-    }, [selectedWorld, refreshCities]);
+    }, [cities, selectedWorld, selectedCity, onCitySelect]);
 
     /*
     =====================================================================
-                              Event handlers
+                               Event handlers
     =====================================================================
      */
     /**
@@ -101,7 +90,7 @@ export default function CityManager({
 
                 try {
                     const { city } = await addCity(selectedWorld.id, finalName);
-                    await refreshCities(selectedWorld.id, true);
+                    // We no longer need to manually refresh; useLiveQuery handles it
                     onCitySelect(city);
                 } catch (e) {
                     showError("Could not create city");
@@ -146,7 +135,6 @@ export default function CityManager({
             if (result.success) {
                 showSuccess(result.message || 'City deleted!');
                 onCitySelect(null);
-                await refreshCities(selectedWorld.id, true);
             } else {
                 console.error(result.error);
                 showError(result.error?.toString() as string);
@@ -191,7 +179,7 @@ export default function CityManager({
                         </Group>
                     </Group>
 
-                    {cities.length > 0 ? (
+                    {cities && cities.length > 0 ? (
                         <Group>
                             <Chip.Group
                                 multiple={false}
