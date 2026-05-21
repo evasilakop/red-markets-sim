@@ -1,11 +1,13 @@
 # Data model
 
 Goals
+
 - Keep entities simple, portable, and storage-agnostic (works with IndexedDB now; REST/GraphQL later).
 - Use stable IDs and explicit relationships.
 - Include a version for future migrations.
 
 ## Entities
+
 - **World**
   - id: string (UUID v4)
   - name: string (1–80 chars)
@@ -32,12 +34,14 @@ Goals
   - updatedAt: ISO 8601
 
 ## Enumerations
+
 - SectorType
   - FOOD & WATER, SHELTER, MATERIAL, PRODUCTS, ENERGY, MEDICINE, SPECULATIVE, TRANSPORTATION, DATA, HR
 - Equilibrium
   - FLOODED, VOLATILE, SUBSIDIARY, SCARCE
 
 ## Actions
+
 - INCREASE_SUPPLY, SUBCONTRACT
 - REDUCE_SUPPLY, RESTRICT_FLOW, SABOTAGE
 - INCREASE_DEMAND, MARKET, PRICE_LOW
@@ -47,6 +51,7 @@ Goals
 - ROLLBACK World-level Undo restores the previous snapshot atomically across all cities/sectors
 
 ## Relationships and constraints
+
 - World 1—N City
 - City 1—N Sector
 - Unique sector per city per type: unique(cityId, type)
@@ -55,6 +60,7 @@ Goals
 - City.lat/lon and boundary are optional, reserved for future real-world seeding
 
 ## Validation rules
+
 - Names: trim; disallow empty; soft max lengths (World 80, City 120)
 - Numbers: integers where applicable; clamp supply/demand to [0, 100]
 - Enums: must be one of the defined values
@@ -62,11 +68,13 @@ Goals
 - Import: validate bundle version; reject unknown enum values or missing required fields; default optional fields
 
 ## Versioning and migration
+
 - Export bundle includes version: integer starting at 1
 - If schema changes, bump version and add a simple migration note (e.g., derive new field on import if missing)
 - Keep DTOs stable; add fields with defaults rather than renaming where possible
 
 ## Storage mapping
+
 - IndexedDB (now)
   - Tables: worlds (id PK), cities (id PK, worldId index), sectors (id PK, cityId+type unique)
   - Bulk operations for sectors to keep writes efficient
@@ -75,6 +83,7 @@ Goals
   - Keep the client-side model unchanged to swap storage backends
 
 ## Glossary
+
 - Starting CHIPS: per Red Markets rules, derived from equilibrium; used for contract negotiation setup
 - Competition undercut dice: negative dice representing market competition penalty; 0 means no competition
 - Price index: display-only multiplier to visualize relative price pressure; not a rules artifact

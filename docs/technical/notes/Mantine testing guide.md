@@ -1,11 +1,13 @@
 # Testing Guide: React + Mantine + Vitest
 
 Testing UI components built with Mantine requires three key things:
-1.  **Mocking Browser APIs** (that JSDOM lacks).
-2.  **Wrapping Components** in the Theme Provider.
-3.  **Using Accessibility-first Selectors**.
+
+1. **Mocking Browser APIs** (that JSDOM lacks).
+2. **Wrapping Components** in the Theme Provider.
+3. **Using Accessibility-first Selectors**.
 
 ## 1. Global Setup (`src/tests/setup.ts`)
+
 Mantine relies on `matchMedia` and `ResizeObserver` for responsiveness. These do not exist in the test environment (JSDOM), so we must mock them globally.
 
 ```typescript
@@ -37,6 +39,7 @@ global.ResizeObserver = class ResizeObserver {
 ```
 
 ## 2. The Render Wrapper
+
 You cannot render a Mantine component (like `<Button>`) without a `<MantineProvider>` ancestor. It will crash.
 
 Create a helper function in your test file (or a shared utility):
@@ -55,6 +58,7 @@ export const renderWithMantine = (ui: React.ReactNode) => {
 ```
 
 **Usage in tests:**
+
 ```tsx
 it('renders correctly', () => {
     renderWithMantine(<MyComponent />); // Works!
@@ -63,18 +67,22 @@ it('renders correctly', () => {
 ```
 
 ## 3. Finding Elements
+
 Mantine components often render complex HTML structures (e.g., a `<Select>` renders an input, a label, and a dropdown portal).
 
 **Do NOT use:**
-*   `container.querySelector('.mantine-Button-root')` (Class names change).
-*   `getByText` on inputs (Text might be in a label or placeholder).
+
+* `container.querySelector('.mantine-Button-root')` (Class names change).
+* `getByText` on inputs (Text might be in a label or placeholder).
 
 **DO use (Accessibility Selectors):**
-*   **Buttons:** `screen.getByRole('button', { name: /save/i })`
-*   **Inputs:** `screen.getByRole('textbox', { name: /city name/i })` (Requires `aria-label` or `<label>`).
-*   **Dropdowns:** `screen.getByRole('combobox', { name: /select world/i })`.
+
+* **Buttons:** `screen.getByRole('button', { name: /save/i })`
+* **Inputs:** `screen.getByRole('textbox', { name: /city name/i })` (Requires `aria-label` or `<label>`).
+* **Dropdowns:** `screen.getByRole('combobox', { name: /select world/i })`.
 
 ## 4. User Interactions
+
 Use `@testing-library/user-event` for interactions. It handles focus and typing better than `fireEvent`.
 
 ```tsx
@@ -95,6 +103,7 @@ it('submits form', async () => {
 ```
 
 ## 5. Common Gotchas
-*   **Modals:** Mantine Modals render in a **Portal** (outside the root div). `screen.getByText` works fine, but `container.querySelector` will fail.
-*   **Act Warning:** If your component fetches data on mount (`useEffect`), you must `await screen.findByText(...)` to wait for the data before the test ends.
-*   **Hoisting:** If you mock modules (`vi.mock`), use `vi.hoisted` for variables you want to use inside the mock factory.
+
+* **Modals:** Mantine Modals render in a **Portal** (outside the root div). `screen.getByText` works fine, but `container.querySelector` will fail.
+* **Act Warning:** If your component fetches data on mount (`useEffect`), you must `await screen.findByText(...)` to wait for the data before the test ends.
+* **Hoisting:** If you mock modules (`vi.mock`), use `vi.hoisted` for variables you want to use inside the mock factory.

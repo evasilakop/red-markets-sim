@@ -1,14 +1,14 @@
 The City Management module serves as the primary entry point for World interaction, allowing users to create, select, and manage cities within a specific World context.
 
-####  Functional Requirements
+#### Functional Requirements
 
-*   **List View:** Displays all cities associated with the currently selected World.
-*   **Selection:** Clicking a city selects it as the active context for further operations (e.g., Sector management).
-*   **Creation:** Users can add new cities via a prompt.
-*   **Deletion:** Users can remove cities. This action is destructive and requires confirmation.
-*   **Feedback:** The UI provides immediate visual feedback for success and error states.
+* **List View:** Displays all cities associated with the currently selected World.
+* **Selection:** Clicking a city selects it as the active context for further operations (e.g., Sector management).
+* **Creation:** Users can add new cities via a prompt.
+* **Deletion:** Users can remove cities. This action is destructive and requires confirmation.
+* **Feedback:** The UI provides immediate visual feedback for success and error states.
 
-####  UI Flow & Behaviors
+#### UI Flow & Behaviors
 
 | State | Behavior | Visual Indicator |
 | :--- | :--- | :--- |
@@ -21,19 +21,20 @@ The City Management module serves as the primary entry point for World interacti
 ####  Confirmation Logic
 
 To prevent accidental data loss, the delete workflow is strictly gated:
-1.  **Pre-condition:** A city must be selected.
-2.  **Trigger:** "Remove City" button is clicked.
-3.  **Gate:** A modal renders with `confirmLabel="Delete"` and `cancelLabel="Cancel"`.
-4.  **Action:** The actual API call to `removeCity` only occurs if the "Delete" button within the modal is clicked.
 
-####  Component Structure
+1. **Pre-condition:** A city must be selected.
+2. **Trigger:** "Remove City" button is clicked.
+3. **Gate:** A modal renders with `confirmLabel="Delete"` and `cancelLabel="Cancel"`.
+4. **Action:** The actual API call to `removeCity` only occurs if the "Delete" button within the modal is clicked.
 
-*   `CityManager`: Main container handling state (`selectedCity`, `showConfirm`) and service calls.
-*   `ConfirmationDialog`: Reusable modal component for the delete flow.
-*   `MessageDisplay`: Scoped notification area (scope: `'city'`) for success/error feedback.
+#### Component Structure
 
-####  Testing Strategy
+* `CityManager`: Main container handling state (`selectedCity`, `showConfirm`) and service calls.
+* `ConfirmationDialog`: Reusable modal component for the delete flow.
+* `MessageDisplay`: Scoped notification area (scope: `'city'`) for success/error feedback.
 
-*   **Service Mocks:** `worldService` is mocked to prevent network calls during testing.
-*   **Interaction:** `userEvent` is used to simulate clicks and prompt inputs.
-*   **Validation:** Tests verify that the "Remove City" button is hidden when no city is selected and that the confirmation dialog appears/disappears correctly.
+#### Testing Strategy
+
+* **Service Mocks:** `worldService` is mocked to prevent network calls during testing.
+* **Interaction:** `userEvent` is used to simulate clicks and prompt inputs.
+* **Validation:** Tests verify that the "Remove City" button is hidden when no city is selected and that the confirmation dialog appears/disappears correctly.
