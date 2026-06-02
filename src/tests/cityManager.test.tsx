@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CityManager from '../app/components/CityManager/CityManager';
-import type { City, World } from '../app/common/types';
+import type { CityV2, World } from '../app/common/types';
 import * as worldService from '../app/services/worldService';
 import { MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
@@ -26,9 +26,31 @@ const mockWorld: World = {
     notes: ''
 };
 
-const mockCities: City[] = [
-    { id: 'city-1', worldId: 'world-1', name: 'City One', lastTick: Date.now() },
-    { id: 'city-2', worldId: 'world-1', name: 'City Two', lastTick: Date.now() }
+const mockCities: CityV2[] = [
+    { 
+        id: 'city-1', 
+        worldId: 'world-1', 
+        name: 'City One', 
+        lastTick: Date.now(),
+        population: 1000,
+        techLevel: 'Industrial',
+        defense: 10,
+        exports: [],
+        imports: [],
+        version: 2
+    },
+    { 
+        id: 'city-2', 
+        worldId: 'world-1', 
+        name: 'City Two', 
+        lastTick: Date.now(),
+        population: 500,
+        techLevel: 'Stone',
+        defense: 5,
+        exports: [],
+        imports: [],
+        version: 2
+    }
 ];
 
 const defaultProps = {
@@ -68,7 +90,7 @@ describe('CityManager', () => {
         vi.spyOn(worldService, 'listCities').mockResolvedValue(mockCities);
         vi.spyOn(worldService, 'addCity').mockResolvedValue({
             sectors: [],
-            city: { id: 'new-city', worldId: 'world-1', name: 'New City', lastTick: Date.now() }
+            city: mockCities[0]
         });
         vi.spyOn(worldService, 'removeCity').mockResolvedValue({ success: true, message: 'City New City deleted successfully.' });
     });

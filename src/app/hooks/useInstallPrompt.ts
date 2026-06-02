@@ -39,7 +39,6 @@ export function useInstallPrompt() {
         // Detect browser and set appropriate install capability
         const userAgent = navigator.userAgent.toLowerCase();
         const isFirefox = userAgent.includes('firefox');
-        const isChromium = userAgent.includes('chrome') || userAgent.includes('edge');
 
         // Firefox doesn't support beforeinstallprompt but can install PWAs
         // Show install button for Firefox if manifest is detected

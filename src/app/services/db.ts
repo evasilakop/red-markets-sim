@@ -16,9 +16,16 @@ export class RMDB extends Dexie {
             cities: 'id, worldId, name, lastTick',   // worldId index for "get all cities in world"
             sectors: 'id, cityId, type',             // cityId index for "get all sectors in city"
         });
+
+        // Define schema version 2 - Add new city fields support
+        this.version(2).stores({
+            worlds: 'id, name, createdAt',
+            cities: 'id, worldId, name, lastTick, population, techLevel, imports, exports',
+            sectors: 'id, cityId, type',
+        });
     }
 }
 
 // Export single instance to use throughout the app
 export const db = new RMDB();
-(window as any).db = db;
+(globalThis as any).db = db;

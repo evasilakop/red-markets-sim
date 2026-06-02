@@ -2,6 +2,7 @@ import {db} from './db.ts';
 import {
     ALL_SECTORS,
     type City,
+    type CityV2, isCityV2,
     type OperationResult,
     type Sector,
     type World
@@ -29,12 +30,42 @@ export async function listWorlds(): Promise<World[]> {
 }
 
 // City operations
-export async function addCity(worldId: string, name: string): Promise<{ city: City; sectors: Sector[] }> {
-    const city: City = {
+/**
+ * Helper to migrate a single city from V1 to V2.
+ */
+function migrateCity(city: City): CityV2 {
+    if (isCityV2(city)) {
+        return city;
+    }
+
+    return {
+        id: city.id,
+        worldId: city.worldId,
+        name: city.name,
+        lastTick: city.lastTick,
+        notes: city.notes ?? null,
+        population: 1000, // Default population
+        techLevel: 'Industrial',
+        defense: 10,
+        exports: [],
+        imports: [],
+        version: 2
+    };
+}
+
+export async function addCity(worldId: string, name: string): Promise<{ city: CityV2; sectors: Sector[] }> {
+    const city: CityV2 = {
         id: uid(),
         worldId,
         name: name.trim() || 'Untitled City',
-        lastTick: Date.now()
+        lastTick: Date.now(),
+        notes: null,
+        population: 1000,
+        techLevel: 'Industrial',
+        defense: 10,
+        exports: [],
+        imports: [],
+        version: 2
     };
 
     // Initialize 10 sectors with random supply/demand around 50
@@ -66,11 +97,32 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
     return { city, sectors };
 }
 
-export async function listCities(worldId: string): Promise<City[]> {
+export async function listCities(worldId: string): Promise<CityV2[]> {
     const cities = await db.cities.where({ worldId }).toArray();
-    cities.sort((a, b) => a.name.localeCompare(b.name)); //sort alphabetically
-    return cities;
+
+    const upgradedCities: CityV2[] = [];
+    const citiesToUpdate: CityV2[] = [];
+
+    for (const city of cities) {
+        if (isCityV2(city)) {
+            upgradedCities.push(city);
+        } else {
+            const upgraded = migrateCity(city);
+            upgradedCities.push(upgraded);
+            citiesToUpdate.push(upgraded);
+        }
+    }
+
+    if (citiesToUpdate.length > 0) {
+        await db.transaction('rw', db.cities, async () => {
+            await db.cities.bulkPut(citiesToUpdate);
+        });
+    }
+
+    upgradedCities.sort((a, b) => a.name.localeCompare(b.name)); //sort alphabetically
+    return upgradedCities;
 }
+
 
 export async function removeCity(cityId: string): Promise<OperationResult> {
     const city = await db.cities.get(cityId);
@@ -155,7 +207,7 @@ export async function exportWorld(worldId: string): Promise<OperationResult> {
         link.click();
 
         // Cleanup
-        document.body.removeChild(link);
+        link.remove();
         URL.revokeObjectURL(url);
 
         return {

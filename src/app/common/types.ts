@@ -38,12 +38,37 @@ export interface World {
     notes?: string | null;
 }
 
-export interface City {
+export type TechLevel = 'Stone' | 'Iron' | 'Industrial' | 'Digital' | 'Cutting Edge';
+
+export interface CityV1 {
     id: string;
     worldId: string;
     name: string;
     lastTick: number;
     notes?: string | null;
+}
+
+export interface CityV2 {
+    id: string;
+    worldId: string;
+    name: string;
+    lastTick: number;
+    notes?: string | null;
+    population: number;
+    techLevel: TechLevel;
+    defense: number;
+    exports: string[];
+    imports: string[];
+    version: 2;
+}
+
+export type City = CityV1 | CityV2;
+
+/**
+ * Type guard to check if a city has been migrated to V2.
+ */
+export function isCityV2(city: City): city is CityV2 {
+    return (city as CityV2).version === 2;
 }
 
 export interface Sector {

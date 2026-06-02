@@ -1,4 +1,33 @@
 import type {Equilibrium, Sector, UserAction} from '../common/types.ts';
+import { parseSimulationWeights } from './configService';
+
+// Note: In a real app, we would fetch this from a file/network. 
+// For now, we assume the config is available via an import or a static block 
+// to avoid async complexity in the pure simulation functions.
+// We use a placeholder that will be replaced by the actual parsed config.
+
+// This is a placeholder. In a production environment, 
+// this would be populated during the app's initialization phase.
+let coefficients: ReturnType<typeof parseSimulationWeights> = {
+    INCREASE_SUPPLY: 3,
+    SUBCONTRACT: 3,
+    REDUCE_SUPPLY: 4,
+    RESTRICT_FLOW: 4,
+    SABOTAGE: 4,
+    INCREASE_DEMAND: 3,
+    MARKET: 3,
+    DECREASE_DEMAND: 3,
+    PRICE_LOW: 2,
+    SPECULATE: 4,
+};
+
+/**
+ * Updates the simulation coefficients at runtime.
+ * Useful for initializing from a file or changing settings mid-session.
+ */
+export function setSimulationCoefficients(newCoeffs: ReturnType<typeof parseSimulationWeights>) {
+    coefficients = newCoeffs;
+}
 
 export function deriveEquilibrium(supply: number, demand: number, prev?: Equilibrium): Equilibrium {
     const s = supply / 100, d = demand / 100;
@@ -50,29 +79,37 @@ export function applyActionToSector(sector: Sector, action: UserAction): Sector 
     let demand = sector.demand;
     const m = Math.max(0, Math.min(10, action.magnitude)); // clamp magnitude 0-10
 
-    // Apply action effects based on type
+    // Apply action effects based on type using externalized coefficients
     switch (action.type) {
         case 'INCREASE_SUPPLY':
+            supply += (coefficients.INCREASE_SUPPLY || 3) * m;
+            break;
         case 'SUBCONTRACT':
-            supply += 3 * m;
+            supply += (coefficients.SUBCONTRACT || 3) * m;
             break;
         case 'REDUCE_SUPPLY':
+            supply -= (coefficients.REDUCE_SUPPLY || 4) * m;
+            break;
         case 'RESTRICT_FLOW':
+            supply -= (coefficients.RESTRICT_FLOW || 4) * m;
+            break;
         case 'SABOTAGE':
-            supply -= 4 * m;
+            supply -= (coefficients.SABOTAGE || 4) * m;
             break;
         case 'INCREASE_DEMAND':
+            demand += (coefficients.INCREASE_DEMAND || 3) * m;
+            break;
         case 'MARKET':
-            demand += 3 * m;
+            demand += (coefficients.MARKET || 3) * m;
             break;
         case 'DECREASE_DEMAND':
-            demand -= 3 * m;
+            demand -= (coefficients.DECREASE_DEMAND || 3) * m;
             break;
         case 'PRICE_LOW':
-            demand += 2 * m;
+            demand += (coefficients.PRICE_LOW || 2) * m;
             break;
         case 'SPECULATE':
-            demand += 4 * m;
+            demand += (coefficients.SPECULATE || 4) * m;
             // Optional: 10% chance of snapback (demand -10)
             if (Math.random() < 0.1) {
                 demand -= 10;
@@ -96,7 +133,7 @@ export function applyActionToSector(sector: Sector, action: UserAction): Sector 
         competitionUndercutDice: competitionDiceFor(equilibrium),
         updatedAt: Date.now()
     };
-}
+} 
 
 
 export function tickSector(sector: Sector): Sector {
