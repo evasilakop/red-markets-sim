@@ -27,9 +27,9 @@ export function useInstallPrompt() {
 
     useEffect(() => {
         // Check if app is already installed
-        const isAlreadyInstalled = 
-            window.matchMedia('(display-mode: standalone)').matches ||
-            (window.navigator as any).standalone === true;
+        const isAlreadyInstalled =
+            globalThis.matchMedia('(display-mode: standalone)').matches ||
+            (globalThis.navigator as any).standalone === true;
 
         if (isAlreadyInstalled) {
             setCanInstall(false);
@@ -58,11 +58,11 @@ export function useInstallPrompt() {
         };
 
         // Listen for the beforeinstallprompt event (Chrome, Edge, Opera)
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        globalThis.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
         // Cleanup listener on unmount
         return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            globalThis.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         };
     }, []);
 

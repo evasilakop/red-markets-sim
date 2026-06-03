@@ -2,7 +2,6 @@ import {db} from './db.ts';
 import {
     ALL_SECTORS,
     type City,
-    type CityV2, isCityV2,
     type OperationResult,
     type Sector,
     type World
@@ -30,31 +29,8 @@ export async function listWorlds(): Promise<World[]> {
 }
 
 // City operations
-/**
- * Helper to migrate a single city from V1 to V2.
- */
-function migrateCity(city: City): CityV2 {
-    if (isCityV2(city)) {
-        return city;
-    }
-
-    return {
-        id: city.id,
-        worldId: city.worldId,
-        name: city.name,
-        lastTick: city.lastTick,
-        notes: city.notes ?? null,
-        population: 1000, // Default population
-        techLevel: 'Industrial',
-        defense: 10,
-        exports: [],
-        imports: [],
-        version: 2
-    };
-}
-
-export async function addCity(worldId: string, name: string): Promise<{ city: CityV2; sectors: Sector[] }> {
-    const city: CityV2 = {
+export async function addCity(worldId: string, name: string): Promise<{ city: City; sectors: Sector[] }> {
+    const city: City = {
         id: uid(),
         worldId,
         name: name.trim() || 'Untitled City',
@@ -64,8 +40,7 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
         techLevel: 'Industrial',
         defense: 10,
         exports: [],
-        imports: [],
-        version: 2
+        imports: []
     };
 
     // Initialize 10 sectors with random supply/demand around 50
@@ -97,30 +72,11 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
     return { city, sectors };
 }
 
-export async function listCities(worldId: string): Promise<CityV2[]> {
+export async function listCities(worldId: string): Promise<City[]> {
     const cities = await db.cities.where({ worldId }).toArray();
 
-    const upgradedCities: CityV2[] = [];
-    const citiesToUpdate: CityV2[] = [];
-
-    for (const city of cities) {
-        if (isCityV2(city)) {
-            upgradedCities.push(city);
-        } else {
-            const upgraded = migrateCity(city);
-            upgradedCities.push(upgraded);
-            citiesToUpdate.push(upgraded);
-        }
-    }
-
-    if (citiesToUpdate.length > 0) {
-        await db.transaction('rw', db.cities, async () => {
-            await db.cities.bulkPut(citiesToUpdate);
-        });
-    }
-
-    upgradedCities.sort((a, b) => a.name.localeCompare(b.name)); //sort alphabetically
-    return upgradedCities;
+    cities.sort((a, b) => a.name.localeCompare(b.name)); //sort alphabetically
+    return cities;
 }
 
 
@@ -155,6 +111,10 @@ export async function getCitySectors(cityId: string): Promise<Sector[]> {
     // Sort alphabetically by sector type
     sectors.sort((a, b) => a.type.localeCompare(b.type));
     return sectors;
+}
+
+export async function updateCityTick(cityId: string): Promise<void> {
+    await db.cities.update(cityId, { lastTick: Date.now() });
 }
 
 export async function updateSectorsInCity(cityId: string, updatedSectors: Sector[]): Promise<void> {

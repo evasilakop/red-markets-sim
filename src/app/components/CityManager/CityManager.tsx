@@ -1,11 +1,10 @@
 import {useEffect, useState} from 'react';
-import {addCity, removeCity} from '../../services/worldService.ts';
+import {addCity, removeCity, listCities} from '../../services/worldService.ts';
 import type {City, World} from '../../common/types.ts';
 import {useMessages} from '../../hooks/useMessages.ts';
 import {Button, Chip, Group, Paper, Stack, Text, TextInput, Title} from '@mantine/core';
 import {modals} from '@mantine/modals';
 import {useLiveQuery} from 'dexie-react-hooks';
-import {db} from '../../services/db';
 
 /**
  * Props for the CityManager component.
@@ -39,8 +38,7 @@ export default function CityManager({
     const cities = useLiveQuery(
         async () => {
             if (!selectedWorld) return [];
-            const cs = await db.cities.where({worldId: selectedWorld.id}).toArray();
-            return cs.sort((a, b) => a.name.localeCompare(b.name));
+            return await listCities(selectedWorld.id);
         },
         [selectedWorld?.id]
     );

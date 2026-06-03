@@ -10,18 +10,10 @@ export class RMDB extends Dexie {
     constructor() {
         super('rm_worlds'); // Database name in IndexedDB
 
-        // Define schema version 1
         this.version(1).stores({
             worlds: 'id, name, createdAt',           // id = primary key, others are indexes
-            cities: 'id, worldId, name, lastTick',   // worldId index for "get all cities in world"
+            cities: 'id, worldId, name, lastTick, population, techLevel, [imports], [exports]',   // worldId index for "get all cities in world"
             sectors: 'id, cityId, type',             // cityId index for "get all sectors in city"
-        });
-
-        // Define schema version 2 - Add new city fields support
-        this.version(2).stores({
-            worlds: 'id, name, createdAt',
-            cities: 'id, worldId, name, lastTick, population, techLevel, imports, exports',
-            sectors: 'id, cityId, type',
         });
     }
 }

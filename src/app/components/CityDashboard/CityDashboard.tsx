@@ -2,8 +2,8 @@ import {useState, useEffect} from 'react';
 import {useCityData} from '../../hooks/useCityData';
 import {useSimWorker} from '../../hooks/useSimWorker';
 import {useMessages} from '../../hooks/useMessages.ts';
-import {db} from '../../services/db';
-import {type ActionType, type SectorType, type UserAction, isCityV2} from '../../common/types';
+import {updateSectorsInCity} from '../../services/worldService';
+import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
 import {Button, Group, Paper, Table, Text, Title, Slider, Badge, Stack} from '@mantine/core';
 import {IconSettings, IconUsers, IconShield, IconMicroscope} from '@tabler/icons-react';
@@ -22,7 +22,6 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
     useEffect(() => {
         if (data?.city) {
             console.log('DEBUG: Current City Data:', data.city);
-            console.log('DEBUG: Is it CityV2?:', isCityV2(data.city));
         }
     }, [data]);
 
@@ -43,13 +42,9 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
             // A. Calculate new state in Worker
             const updatedSectors = await tick(data.sectors);
 
-            // B. Save to DB (React will auto-update because of useCityData)
-            // We also update the City's lastTick timestamp
-            await db.transaction('rw', db.sectors, db.cities, async () => {
-                await db.sectors.bulkPut(updatedSectors);
-                await db.cities.update(data.city.id, {lastTick: Date.now()});
-                showSuccess('World updated')
-            });
+            // B. Save to DB via WorldService
+            await updateSectorsInCity(data.city.id, updatedSectors);
+            showSuccess('World updated')
 
         } catch (error) {
             console.error("Tick failed", error);
@@ -84,7 +79,7 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
             } as Record<SectorType, UserAction[]>;
 
             const updatedSectors = await applyActions(data.sectors, actionsMap);
-            await db.sectors.bulkPut(updatedSectors);
+            await updateSectorsInCity(data.city.id, updatedSectors);
 
         } catch (error) {
             console.error("Action failed", error);
@@ -134,27 +129,21 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
                         )}
                     </Group>
 
-                    {/*  City Stats Overview */}
-                    <Group gap={'xs'} mt={'xs'}>
-                        {isCityV2(city) ? (
-                            <>
-                                <Group gap={5}>
-                                    <IconUsers size={16} color={'gray'} />
-                                    <Text size={'sm'} c={'dimmed'}>{city.population.toLocaleString()}</Text>
-                                </Group>
-                                <Group gap={5}>
-                                    <IconMicroscope size={16} color={'gray'} />
-                                    <Badge variant={'light'} size={'sm'}>{city.techLevel}</Badge>
-                                </Group>
-                                <Group gap={5}>
-                                    <IconShield size={16} color={'gray'} />
-                                    <Text size={'sm'} c={'dimmed'}>{city.defense}</Text>
-                                </Group>
-                            </>
-                        ) : (
-                            <Text size={'xs'} c={'dimmed'}>Legacy City (Stats unavailable)</Text>
-                        )}
-                    </Group>
+                     {/*  City Stats Overview */}
+                     <Group gap={'xs'} mt={'xs'}>
+                         <Group gap={5}>
+                             <IconUsers size={16} color={'gray'} />
+                             <Text size={'sm'} c={'dimmed'}>{city.population.toLocaleString()}</Text>
+                         </Group>
+                         <Group gap={5}>
+                             <IconMicroscope size={16} color={'gray'} />
+                             <Badge variant={'light'} size={'sm'}>{city.techLevel}</Badge>
+                         </Group>
+                         <Group gap={5}>
+                             <IconShield size={16} color={'gray'} />
+                             <Text size={'sm'} c={'dimmed'}>{city.defense}</Text>
+                         </Group>
+                     </Group>
                 </Stack>
 
                 <Group>
