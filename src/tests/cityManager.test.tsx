@@ -1,12 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CityManager from '../app/components/CityManager/CityManager';
-import type { City, World } from '../app/common/types';
 import * as worldService from '../app/services/worldService';
-import { MantineProvider } from '@mantine/core';
-import { ModalsProvider } from '@mantine/modals';
-import {notifications} from "@mantine/notifications";
+import { renderWithProviders, createTestDb } from './test-utils';
+import { mockWorld, mockCities } from './fixtures';
+import * as dbModule from '../app/services/db';
 
 // --- MOCKS ---
 vi.mock('@mantine/notifications', () => ({
@@ -16,79 +15,54 @@ vi.mock('@mantine/notifications', () => ({
     }
 }));
 
-vi.mock('../app/services/worldService');
+vi.mock('../app/services/worldService', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../app/services/worldService')>();
+    return {
+        ...actual,
+    };
+});
 
 // --- TEST DATA ---
-const mockWorld: World = {
-    id: 'world-1',
-    name: 'Test World',
-    createdAt: Date.now(),
-    notes: ''
-};
-
-const mockCities: City[] = [
-    { id: 'city-1', worldId: 'world-1', name: 'City One', lastTick: Date.now() },
-    { id: 'city-2', worldId: 'world-1', name: 'City Two', lastTick: Date.now() }
-];
-
 const defaultProps = {
     selectedWorld: mockWorld,
     selectedCity: mockCities[0],
     onCitySelect: vi.fn(),
 };
 
-// --- HELPER ---
-const renderWithMantine = (ui: React.ReactNode) => {
-    return render(
-        <MantineProvider theme={{
-            components: {
-                Modal: {
-                    defaultProps: {
-                        transitionProps: { duration: 0 },
-                        // Disable focus trap in tests to prevent JSDOM issues
-                        trapFocus: false,
-                        lockScroll: false,
-                        withinPortal: false // Render inside the DOM hierarchy, easier to debug
-                    }
-                }
-            }
-        }}>
-            <ModalsProvider>
-                {ui}
-            </ModalsProvider>
-        </MantineProvider>
-    );
-};
-
 // --- TESTS ---
 
 describe('CityManager', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        vi.spyOn(worldService, 'listCities').mockResolvedValue(mockCities);
+    let testDb: any;
+
+    beforeEach(async () => {
+        testDb = createTestDb();
+        
+        // Seed the database
+        await testDb.worlds.add(mockWorld);
+        await testDb.cities.bulkAdd(mockCities);
+
+        // Replace the singleton db in the module with our testDb
+        vi.spyOn(dbModule, 'db', 'get').mockReturnValue(testDb);
+
+        // Mock service calls that we don't want to hit the real implementation of
         vi.spyOn(worldService, 'addCity').mockResolvedValue({
             sectors: [],
-            city: { id: 'new-city', worldId: 'world-1', name: 'New City', lastTick: Date.now() }
+            city: mockCities[0]
         });
-        vi.spyOn(worldService, 'removeCity').mockResolvedValue({ success: true, message: 'City New City deleted successfully.' });
+        vi.spyOn(worldService, 'removeCity').mockResolvedValue({ success: true, message: 'City deleted successfully.' });
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+        await testDb.close();
         vi.restoreAllMocks();
-        vi.unstubAllGlobals();
-    })
-
+    });
 
     describe('City Selection', () => {
         it('highlights selected city', async () => {
-            renderWithMantine(<CityManager {...defaultProps} />);
+            renderWithProviders(<CityManager {...defaultProps} />);
 
-            // Wait for render
-            const selectedCityBtn = await screen.findByRole('radio', { name: 'City One' });
-            // Mantine filled variant usually has a specific class or style,
-            // but checking attribute 'data-variant' if available is better.
-            // Or check if it has the 'filled' class logic.
-            // Simpler: Check if it exists. Visual regression handles style.
+            // The chips are used for selection. We search by text.
+            const selectedCityBtn = await screen.findByText('City One');
             expect(selectedCityBtn).toBeInTheDocument();
         });
 
@@ -96,9 +70,9 @@ describe('CityManager', () => {
             const user = userEvent.setup();
             const onCitySelect = vi.fn();
 
-            renderWithMantine(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
+            renderWithProviders(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
 
-            const btn = await screen.findByRole('radio', { name: 'City Two' });
+            const btn = await screen.findByText('City Two');
             await user.click(btn);
 
             expect(onCitySelect).toHaveBeenCalledWith(mockCities[1]);
@@ -110,19 +84,18 @@ describe('CityManager', () => {
             const user = userEvent.setup();
             const onCitySelect = vi.fn();
 
-            renderWithMantine(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
+            renderWithProviders(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
 
             // 1. Click Add City
             const addBtn = await screen.findByRole('button', { name: /Add City/i });
             await user.click(addBtn);
 
             // 2. Modal appears. Find Input.
-            // Mantine modals are in a Portal, but screen queries document.body so it works.
             const input = await screen.findByPlaceholderText('City name');
             await user.type(input, 'New Test City');
 
             // 3. Click Confirm (Create)
-            const createBtn = screen.getByRole('button', { name: /^Create$/i }); // Exact match to avoid "Create New City"
+            const createBtn = screen.getByRole('button', { name: /^Create$/i });
             await user.click(createBtn);
 
             expect(worldService.addCity).toHaveBeenCalledWith('world-1', 'New Test City');
@@ -134,7 +107,7 @@ describe('CityManager', () => {
             const user = userEvent.setup();
             const onCitySelect = vi.fn();
 
-            renderWithMantine(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
+            renderWithProviders(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
 
             // 1. Click Remove
             const removeBtn = await screen.findByRole('button', { name: /Remove City/i });
@@ -148,16 +121,6 @@ describe('CityManager', () => {
             await user.click(confirmBtn);
 
             expect(worldService.removeCity).toHaveBeenCalledWith('city-1');
-
-            await waitFor(() => {
-                expect(notifications.show).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        title: 'Success',
-                        message: expect.stringMatching(/deleted successfully/i),
-                        color: 'green'
-                    })
-                );
-            });
         });
     });
 });

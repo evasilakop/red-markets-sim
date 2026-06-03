@@ -1,12 +1,12 @@
+import {useState, useEffect} from 'react';
 import {useCityData} from '../../hooks/useCityData';
 import {useSimWorker} from '../../hooks/useSimWorker';
-import {db} from '../../services/db';
+import {useMessages} from '../../hooks/useMessages.ts';
+import {updateSectorsInCity} from '../../services/worldService';
 import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
-import {Button, Group, Paper, Table, Text, Title, Slider} from '@mantine/core';
-import {useMessages} from '../../hooks/useMessages.ts';
-import {useState} from 'react';
-import {IconSettings} from '@tabler/icons-react';
+import {Button, Group, Paper, Table, Text, Title, Slider, Badge, Stack} from '@mantine/core';
+import {IconSettings, IconUsers, IconShield, IconMicroscope} from '@tabler/icons-react';
 
 interface CityDashboardProps {
     cityId: string | null;
@@ -18,6 +18,12 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
     const {showSuccess, showError} = useMessages();
     const [visibleRows, setVisibleRows] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
+
+    useEffect(() => {
+        if (data?.city) {
+            console.log('DEBUG: Current City Data:', data.city);
+        }
+    }, [data]);
 
     /*
     =====================================================================
@@ -36,13 +42,9 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
             // A. Calculate new state in Worker
             const updatedSectors = await tick(data.sectors);
 
-            // B. Save to DB (React will auto-update because of useCityData)
-            // We also update the City's lastTick timestamp
-            await db.transaction('rw', db.sectors, db.cities, async () => {
-                await db.sectors.bulkPut(updatedSectors);
-                await db.cities.update(data.city.id, {lastTick: Date.now()});
-                showSuccess('World updated')
-            });
+            // B. Save to DB via WorldService
+            await updateSectorsInCity(data.city.id, updatedSectors);
+            showSuccess('World updated')
 
         } catch (error) {
             console.error("Tick failed", error);
@@ -77,7 +79,7 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
             } as Record<SectorType, UserAction[]>;
 
             const updatedSectors = await applyActions(data.sectors, actionsMap);
-            await db.sectors.bulkPut(updatedSectors);
+            await updateSectorsInCity(data.city.id, updatedSectors);
 
         } catch (error) {
             console.error("Action failed", error);
@@ -98,33 +100,52 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
     return (
         <Paper shadow={'xs'} p={'md'} withBorder m={'md'}>
             {/* Header Section */}
-            <Group justify={'space-between'} align={'center'} w={'100%'}>
-                <Group justify={'left'} align={'center'}>
-                    <Title order={2}>{city.name} Market</Title>
-                    <Button
-                        variant={'subtle'}
-                        color={'gray'}
-                        onClick={() => setShowSettings(!showSettings)}
-                        aria-label={'City Dashboard Settings'}
-                        size={'compact-xs'}
-                    >
-                        <IconSettings size={20} />
-                    </Button>
-                    {showSettings && (
-                        <Group gap={'xs'} wrap={'nowrap'} align={'center'}>
-                            <Text size={'xs'} c={'dimmed'}>Table Size</Text>
-                            <Slider
-                                value={visibleRows}
-                                onChange={setVisibleRows}
-                                min={2}
-                                max={10}
-                                step={1}
-                                w={150}
-                                aria-label={'Adjust visible rows'}
-                            />
-                        </Group>
-                    )}
-                </Group>
+            <Group justify={'space-between'} align={'start'} w={'100%'}>
+                <Stack gap={0}>
+                    <Group justify={'left'} align={'center'}>
+                        <Title order={2}>{city.name} Market</Title>
+                        <Button
+                            variant={'subtle'}
+                            color={'gray'}
+                            onClick={() => setShowSettings(!showSettings)}
+                            aria-label={'City Dashboard Settings'}
+                            size={'compact-xs'}
+                        >
+                            <IconSettings size={20} />
+                        </Button>
+                        {showSettings && (
+                            <Group gap={'xs'} wrap={'nowrap'} align={'center'}>
+                                <Text size={'xs'} c={'dimmed'}>Table Size</Text>
+                                <Slider
+                                    value={visibleRows}
+                                    onChange={setVisibleRows}
+                                    min={2}
+                                    max={10}
+                                    step={1}
+                                    w={150}
+                                    aria-label={'Adjust visible rows'}
+                                />
+                            </Group>
+                        )}
+                    </Group>
+
+                     {/*  City Stats Overview */}
+                     <Group gap={'xs'} mt={'xs'}>
+                         <Group gap={5}>
+                             <IconUsers size={16} color={'gray'} />
+                             <Text size={'sm'} c={'dimmed'}>{city.population.toLocaleString()}</Text>
+                         </Group>
+                         <Group gap={5}>
+                             <IconMicroscope size={16} color={'gray'} />
+                             <Badge variant={'light'} size={'sm'}>{city.techLevel}</Badge>
+                         </Group>
+                         <Group gap={5}>
+                             <IconShield size={16} color={'gray'} />
+                             <Text size={'sm'} c={'dimmed'}>{city.defense}</Text>
+                         </Group>
+                     </Group>
+                </Stack>
+
                 <Group>
 
                     <Text size={'sm'} c={'dimmed'}>
@@ -140,7 +161,7 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
             </Group>
 
             {/* Main Sector Table */}
-            <Table.ScrollContainer minWidth={500}>
+            <Table.ScrollContainer minWidth={500} mt={'md'}>
                 <Table striped highlightOnHover={true} stickyHeader
                        withRowBorders={false}>
                     <Table.Thead>

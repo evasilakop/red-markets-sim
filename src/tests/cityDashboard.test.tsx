@@ -56,7 +56,7 @@ describe('CityDashboard', () => {
 
     it('renders sector table when data is loaded', () => {
         const mockData: CityData = {
-            city: { id: 'c1', worldId: 'w1', name: 'Test City', lastTick: Date.now() },
+            city: { id: 'c1', worldId: 'w1', name: 'Test City', lastTick: Date.now(), techLevel: 'Iron', defense: 500, population: 1000, imports: [], exports: [] },
             sectors: [
                 {
                     id: 's1', cityId: 'c1', type: 'FOOD & WATER',
@@ -75,7 +75,7 @@ describe('CityDashboard', () => {
 
     it('calls tick function when Advance Time is clicked', async () => {
         const mockData: CityData = {
-            city: { id: 'c1', worldId: 'w1', name: 'Test City', lastTick: Date.now() },
+            city: { id: 'c1', worldId: 'w1', name: 'Test City', lastTick: Date.now(), techLevel: 'Iron', defense: 500, population: 1000, imports: [], exports: [] },
             sectors: []
         };
         mockUseCityData.mockReturnValue(mockData);

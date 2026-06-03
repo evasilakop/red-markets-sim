@@ -34,7 +34,13 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
         id: uid(),
         worldId,
         name: name.trim() || 'Untitled City',
-        lastTick: Date.now()
+        lastTick: Date.now(),
+        notes: null,
+        population: 1000,
+        techLevel: 'Industrial',
+        defense: 10,
+        exports: [],
+        imports: []
     };
 
     // Initialize 10 sectors with random supply/demand around 50
@@ -68,9 +74,11 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
 
 export async function listCities(worldId: string): Promise<City[]> {
     const cities = await db.cities.where({ worldId }).toArray();
+
     cities.sort((a, b) => a.name.localeCompare(b.name)); //sort alphabetically
     return cities;
 }
+
 
 export async function removeCity(cityId: string): Promise<OperationResult> {
     const city = await db.cities.get(cityId);
@@ -103,6 +111,10 @@ export async function getCitySectors(cityId: string): Promise<Sector[]> {
     // Sort alphabetically by sector type
     sectors.sort((a, b) => a.type.localeCompare(b.type));
     return sectors;
+}
+
+export async function updateCityTick(cityId: string): Promise<void> {
+    await db.cities.update(cityId, { lastTick: Date.now() });
 }
 
 export async function updateSectorsInCity(cityId: string, updatedSectors: Sector[]): Promise<void> {
@@ -155,7 +167,7 @@ export async function exportWorld(worldId: string): Promise<OperationResult> {
         link.click();
 
         // Cleanup
-        document.body.removeChild(link);
+        link.remove();
         URL.revokeObjectURL(url);
 
         return {

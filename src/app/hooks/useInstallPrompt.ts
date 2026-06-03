@@ -27,9 +27,9 @@ export function useInstallPrompt() {
 
     useEffect(() => {
         // Check if app is already installed
-        const isAlreadyInstalled = 
-            window.matchMedia('(display-mode: standalone)').matches ||
-            (window.navigator as any).standalone === true;
+        const isAlreadyInstalled =
+            globalThis.matchMedia('(display-mode: standalone)').matches ||
+            (globalThis.navigator as any).standalone === true;
 
         if (isAlreadyInstalled) {
             setCanInstall(false);
@@ -39,7 +39,6 @@ export function useInstallPrompt() {
         // Detect browser and set appropriate install capability
         const userAgent = navigator.userAgent.toLowerCase();
         const isFirefox = userAgent.includes('firefox');
-        const isChromium = userAgent.includes('chrome') || userAgent.includes('edge');
 
         // Firefox doesn't support beforeinstallprompt but can install PWAs
         // Show install button for Firefox if manifest is detected
@@ -59,11 +58,11 @@ export function useInstallPrompt() {
         };
 
         // Listen for the beforeinstallprompt event (Chrome, Edge, Opera)
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        globalThis.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
         // Cleanup listener on unmount
         return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            globalThis.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         };
     }, []);
 

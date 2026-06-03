@@ -38,12 +38,19 @@ export interface World {
     notes?: string | null;
 }
 
+export type TechLevel = 'Stone' | 'Iron' | 'Industrial' | 'Digital' | 'Cutting Edge';
+
 export interface City {
     id: string;
     worldId: string;
     name: string;
     lastTick: number;
     notes?: string | null;
+    population: number;
+    techLevel: TechLevel;
+    defense: number;
+    exports: string[];
+    imports: string[];
 }
 
 export interface Sector {

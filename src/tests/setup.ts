@@ -1,8 +1,11 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+// Polyfill IndexedDB for JSDOM environment
+import 'fake-indexeddb/auto';
+
 // 1. Mock matchMedia (for Mantine color scheme)
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(globalThis, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation(query => ({
         matches: false,
@@ -18,7 +21,7 @@ Object.defineProperty(window, 'matchMedia', {
 
 // 2. Mock ResizeObserver (for Mantine layout)
 // Must be a class, not an arrow function
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
@@ -26,7 +29,7 @@ global.ResizeObserver = class ResizeObserver {
 
 // 3. Mock Web Worker (for useSimWorker)
 // Must be a class
-global.Worker = class Worker {
+globalThis.Worker = class Worker {
     url: string;
     onmessage: (msg: any) => void;
     constructor(stringUrl: string) {

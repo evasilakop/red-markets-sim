@@ -3,7 +3,6 @@ import type {
     Sector,
     SectorType,
     UserAction,
-    WorkerRequest,
     WorkerResponse,
     ApplyActionsMsg,
     TickMsg
@@ -87,7 +86,7 @@ export function useSimWorker(): UseSimWorkerResult {
             worker.addEventListener('message', handleResponse);
 
             // Send the request with the ID attached
-            worker.postMessage({...payload, id} as WorkerRequest);
+            worker.postMessage({...payload, id});
 
             // Failsafe timeout to prevent hanging promises
             setTimeout(() => {
