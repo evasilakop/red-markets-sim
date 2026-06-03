@@ -1,87 +1,61 @@
-# Architecture
+# System Architecture: Red Markets Companion
 
-## Stack and app type
+## 1. High-Level Overview
+The application is a market simulation based on a hierarchical data model: **World $\rightarrow$ City $\rightarrow$ Sector**. The architecture follows a strict layered approach to separate data persistence, business logic (simulation), and the reactive UI.
 
-- **Framework**: **React** + **TypeScript**
+## 2. Layered Architecture
 
-  - Rationale: Industry-standard, strong ecosystem; TS adds type safety and maintainability.
-  - Sources: React docs (react.dev/learn), TypeScript docs (typescriptlang.org/docs)
-- **Build tool**: **Vite**
-  - Rationale: Fast dev server, great TS support, simple Web Worker bundling.
-  - Sources: Vite guide (vitejs.dev/guide/)
-- **App type**: **Client-only Single-Page Application (SPA), deployable as static files**
-  - Rationale: No login or multi-user; all data local to the browser; easy hosting on CDN-backed static platforms.
-  - Sources: SPA concept (developer.mozilla.org/en-US/docs/Glossary/SPA)
+### 2.1 Data Layer (Persistence)
+- **Technology:** Dexie.js (IndexedDB wrapper).
+- **Schema:**
+  - `worlds`: Top-level containers.
+  - `cities`: Linked to a world via `worldId`.
+  - `sectors`: Linked to a city via `cityId`.
+- **Responsibility:** Pure CRUD operations and transactional integrity.
 
-### Persistence (local, per-user)
+### 2.2 Service Layer (Business Logic)
+To prevent "God Objects," the business logic is split by responsibility:
 
-- Storage: **IndexedDB** via **Dexie**
-  - Rationale: IndexedDB handles structured objects, indexes, and bulk operations better than localStorage; Dexie provides a simple Promise-based API with transactions.
-  - Sources: IndexedDB (developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API), Dexie (dexie.org/docs/Index)
-- Data model (high-level): worlds, cities, sectors tables. Version in export bundles to allow future migrations.
-- Alternatives considered:
-  - localStorage: too limited and synchronous; not suitable for many records (developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
-  - localForage: simpler API, but less schema control vs Dexie (localforage.github.io/localForage/)
+#### **WorldService (The Orchestrator)**
+- **Scope:** Macro-level lifecycle.
+- **Responsibilities:**
+  - World creation, listing, and deletion.
+  - World import/export (JSON bundles).
+  - Orchestrating cascading deletes (calling `CityService` to wipe a world's cities).
 
-### Simulation execution
+#### **CityService (The Manager)**
+- **Scope:** Micro-level city and sector operations.
+- **Responsibilities:**
+  - City creation and sector initialization.
+  - City-level data retrieval (e.g., `getCityData` for hooks).
+  - Persisting simulation updates (ticks and user actions).
 
-- **Simulation Engine**: Inline within UI components
-  - Rationale: Given the current size of the app, running simulations inline keeps the setup simple and avoids unnecessary complexity.
-  - Sources: None needed for inline logic.
+#### **Simulation Engine (`sim.ts`)**
+- **Scope:** Pure functional logic.
+- **Responsibilities:**
+  - Calculating supply/demand shifts based on `UserAction` and coefficients.
+  - Deriving market equilibrium (FLOODED, VOLATILE, etc.).
+  - Generating ambient market noise.
+- **Constraint:** Must remain pure; it does not touch the DB directly.
 
-## Data flow (actions and ticks)
+### 2.3 Interface Layer (UI/Hooks)
+- **State Management:** Reactive queries via `dexie-react-hooks`.
+- **Hooks:** Specialized hooks (e.g., `useCityData`) act as a bridge between the UI and `CityService`, ensuring the UI never interacts with the DB instance directly.
+- **Components:** Divided into World management, City management, and the Simulation Dashboard.
 
-1. UI loads current data using local state hooks.
-2. UI triggers actions that update local state.
-3. UI refreshes the view based on updated state.
+## 3. Key Design Decisions
 
-## Import/Export
+### 3.1 Dependency Flow
+To avoid circular dependencies, the system follows a one-way flow:
+`UI Components` $\rightarrow$ `Hooks` $\rightarrow$ `World/City Services` $\rightarrow$ `Simulation Engine` $\rightarrow$ `DB`.
 
-- Export: Build a JSON bundle (worlds + cities + version). Create a Blob and download via URL.createObjectURL.
-- Import: Read a JSON file from an input element, validate version, write to local state in a transaction.
-- Sources: Blob (developer.mozilla.org/en-US/docs/Web/API/Blob), URL.createObjectURL (developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static), File input (developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file)
+### 3.2 Transactional Integrity
+Operations that touch multiple tables (e.g., adding a city and its 10 sectors) are wrapped in `db.transaction` blocks. The `WorldService` typically owns the transaction boundary for world-level deletions to ensure atomicity.
 
-## State management in UI
+### 3.3 Centralized Constants
+All system limits (e.g., `MAX_SUPPLY`, `MAX_MAGNITUDE`) are housed in `common/constants.ts`. The simulation engine strictly consumes these constants to ensure rulebook consistency across the application.
 
-- Use React local state (`useState`/`useEffect`) for managing `viewMode`, `selectedWorld`, and `selectedCity`.
-- Rationale: The app is small; global state libraries are unnecessary for MVP.
-- Future options if complexity grows: Zustand or Redux Toolkit.
-  - Sources: Zustand (zustand-demo.pmnd.rs/), Redux Toolkit (redux-toolkit.js.org/)
-
-## Styling and accessibility
-
-- Minimal CSS for tables/bars; prioritize contrast and readable fonts, may change later
-- Accessibility baseline:
-  - Labels for inputs, keyboard focus order, sufficient color contrast, clear text equivalents for visual indicators.
-- Sources: WCAG color contrast (developer.mozilla.org/en-US/docs/Web/Accessibility/Understanding_WCAG/Perceivable/Color_contrast), WAI-ARIA practices (w3.org/WAI/ARIA/apg/)
-
-## Performance considerations
-
-- Avoid unnecessary re-renders (memoize where helpful).
-  - Sources: React performance (react.dev/learn/optimize-performance)
-- If city lists grow large, consider list virtualization later (react-window).
-  - Sources: React Window (github.com/bvaughn/react-window)
-
-## Testing approach
-
-- Unit tests: Equilibrium derivation, CHIPS/competition mapping, action effects.
-- Integration smoke tests: Import/export roundtrip, CRUD operations for worlds/cities.
-- Tooling: Vitest (fast TS-friendly test runner).
-  - Sources: Vitest (vitest.dev/guide/), Testing Library (testing-library.com/docs/react-testing-library/intro)
-
-## Security and privacy
-
-- No backend; all data stored locally in the user’s browser via React local state.
-- Import validation: reject malformed or incompatible bundles (version mismatch).
-- Guidance: In README/UI, advise users to Export regularly; clearing site data deletes local worlds.
-
-## Risks and mitigations
-
-- Local state cleared by user → Provide clear Export guidance; add import/export buttons prominently.
-- Large worlds cause slow UI → Consider virtualization for large lists.
-
-## Future evolution paths
+## 4. Future evolution paths
 
 - Replace React local state with a global state management solution (Zustand/Redux Toolkit) as complexity grows.
-- Add PWA caching and offline-first behaviors after MVP stabilizes.
 - Integrate optional real-world seeding via OSM/World Bank (documented separately).

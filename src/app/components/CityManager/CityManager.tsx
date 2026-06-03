@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {addCity, removeCity, listCities} from '../../services/worldService.ts';
+import {addCity, removeCity, listCities} from '../../services/cityService.ts';
 import type {City, World} from '../../common/types.ts';
 import {useMessages} from '../../hooks/useMessages.ts';
 import {Button, Chip, Group, Paper, Stack, Text, TextInput, Title} from '@mantine/core';
@@ -92,6 +92,7 @@ export default function CityManager({
                     onCitySelect(city);
                 } catch (e) {
                     showError("Could not create city");
+                    console.error(e);
                 }
             }
         });

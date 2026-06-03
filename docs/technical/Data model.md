@@ -17,10 +17,16 @@ Goals
   - id: string (UUID v4)
   - worldId: string (FK → World.id)
   - name: string (1–120 chars)
+  - lastTick: ISO 8601 string (Timestamp of the last simulation update.)
+  - population: number
+  - techLevel: Stone, Iron, Industrial, Digital, Cutting Edge. 
+  - defense: number Defense rating. 
+  - notes?: string (User-added metadata.)
+  - exports: string[]
+  - imports: string[]
+  Future versions: 
   - lat?: number (WGS84 latitude), lon?: number (longitude)
   - boundary?: GeoJSON Polygon/Multipolygon serialized as JSON (future seeding)
-  - lastTick: ISO 8601 string
-  - metadata?: object (provider/source info; future seeding provenance)
 - **Sector**
   - id: string (UUID v4)
   - cityId: string (FK → City.id)
@@ -77,7 +83,7 @@ Goals
 
 - IndexedDB (now)
   - Tables: worlds (id PK), cities (id PK, worldId index), sectors (id PK, cityId+type unique)
-  - Bulk operations for sectors to keep writes efficient
+  - Bulk operations for worlds and sectors to keep writes efficient
 - API (future)
   - DAL can mirror the same shapes; endpoints or resolvers operate on World/City/Sector DTOs
   - Keep the client-side model unchanged to swap storage backends

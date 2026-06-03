@@ -120,11 +120,3 @@ export type OperationResult = {
     message?: string;
     error?: string;
 };
-
-/*
-====================================================
-                     Message utils
-====================================================
- */
-
-export type MessageType = 'success' | 'warning' | 'error';

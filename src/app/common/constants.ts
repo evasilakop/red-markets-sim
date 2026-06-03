@@ -1,16 +1,7 @@
 import {
     type ActionType,
-    type MessageType,
     type SectorType
 } from './types';
-
-/*
-    ===========================================
-                  Message utils
-    ===========================================
-*/
-
-export const ALL_MESSAGE_TYPES: MessageType[] = ['success', 'warning', 'error'];
 
 /*
     ===========================================
