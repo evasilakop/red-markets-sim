@@ -100,8 +100,67 @@ Clicking **"Advance Time"** simulates the passage of one economic cycle (usually
 
 ---
 
+## 💡 Market Features: Tuning Simulation Intensity
+
+As a Game Master (GM), you can adjust the "intensity" of the simulation by modifying the action coefficients. This allows you to control how much impact player actions have on the market without touching the source code.
+
+### 🛠 How to Tune the Simulation
+
+All simulation weights are stored in a simple text file. By editing this file, you can make the world feel more reactive (high coefficients) or more stable/stubborn (low coefficients).
+
+**File Location:** `public/config/simulation_weights.txt`
+
+#### 📝 File Format
+The file uses a simple `KEY=VALUE` format.
+- **Keys:** The name of the action (e.g., `SABOTAGE`). This is **case-insensitive**, so `sabotage=4` works just as well as `SABOTAGE=4`.
+- **Values:** Whole numbers representing the multiplier.
+- **Comments:** You can use the `#` symbol to add notes or disable a line.
+- **Whitespace:** Extra spaces around the `=` sign are ignored.
+
+---
+
+### 📋 Baseline Configuration (Default)
+
+If you are unsure where to start, use these default values. These represent a balanced simulation where high-risk actions (like Sabotage) have a higher impact than standard market shifts.
+
+```text
+# --- Simulation Action Coefficients ---
+# Higher values = More dramatic impact on Supply/Demand
+
+# Supply Actions
+INCREASE_SUPPLY=3
+SUBCONTRACT=3
+REDUCE_SUPPLY=4
+RESTRICT_FLOW=4
+SABOTAGE=4
+
+# Demand Actions
+INCREASE_DEMAND=3
+MARKET=3
+DECREASE_DEMAND=3
+PRICE_LOW=2
+SPECULATE=4
+```
+
+---
+
+### 🎲 Tuning Strategies
+
+| Goal | Strategy | Example Change |
+| :--- | :--- | :--- |
+| **"Hardcore" Mode** | Increase coefficients across the board to make every action swing the market wildly. | `SABOTAGE=10` |
+| **"Stable" Economy** | Lower coefficients to make the market more resistant to player interference. | `MARKET=1` |
+| **"Sabotage Heavy"** | Boost specific keys to make the game feel more violent/unpredictable. | `SABOTAGE=8`, `REDUCE_SUPPLY=8` |
+
+### ⚠️ Important Notes
+1. **Reload Required:** Changes to the `.txt` file will only take effect once the web application is **refreshed** in the browser.
+2. **Safety Fallback:** If you accidentally delete the file, introduce a typo in a key name, or enter a non-numeric value (e.g., `SABOTAGE=abc`), the simulation will **automatically revert to the default values** to prevent the game from crashing.
+
+---
+
 ## Data Management
 
 * **Local Storage:** All data is saved to your browser (IndexedDB). It persists even if you close the tab.
 * **Export:** You can download your world as a `.json` file to back it up or share it with another GM.
 * **Import:** Restore a world from a `.json` file.
+

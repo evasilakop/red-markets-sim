@@ -1,33 +1,19 @@
 import type {Equilibrium, Sector, UserAction} from '../common/types.ts';
-import { parseSimulationWeights } from './configService';
+import {DEFAULT_COEFFICIENTS} from './configService.ts';
 import {MAX_MAGNITUDE, MAX_SUPPLY, MIN_MAGNITUDE, MIN_SUPPLY} from "../common/constants.ts";
 
-// Note: In a real app, we would fetch this from a file/network. 
-// For now, we assume the config is available via an import or a static block 
-// to avoid async complexity in the pure simulation functions.
-// We use a placeholder that will be replaced by the actual parsed config.
-
-// This is a placeholder. In a production environment, 
-// this would be populated during the app's initialization phase.
-let coefficients: ReturnType<typeof parseSimulationWeights> = {
-    INCREASE_SUPPLY: 3,
-    SUBCONTRACT: 3,
-    REDUCE_SUPPLY: 4,
-    RESTRICT_FLOW: 4,
-    SABOTAGE: 4,
-    INCREASE_DEMAND: 3,
-    MARKET: 3,
-    DECREASE_DEMAND: 3,
-    PRICE_LOW: 2,
-    SPECULATE: 4,
-};
+let coefficients: typeof DEFAULT_COEFFICIENTS = { ...DEFAULT_COEFFICIENTS };
 
 /**
  * Updates the simulation coefficients at runtime.
  * Useful for initializing from a file or changing settings mid-session.
+ * Merges new coefficients with defaults to ensure all keys exist.
  */
-export function setSimulationCoefficients(newCoeffs: ReturnType<typeof parseSimulationWeights>) {
-    coefficients = newCoeffs;
+export function setSimulationCoefficients(newCoeffs: Partial<typeof DEFAULT_COEFFICIENTS>) {
+    coefficients = {
+        ...DEFAULT_COEFFICIENTS,
+        ...newCoeffs
+    } as typeof DEFAULT_COEFFICIENTS;
 }
 
 export function deriveEquilibrium(supply: number, demand: number, prev?: Equilibrium): Equilibrium {
@@ -96,34 +82,34 @@ export function applyActionToSector(sector: Sector, action: UserAction): Sector 
     // Apply action effects based on type using externalized coefficients
     switch (action.type) {
         case 'INCREASE_SUPPLY':
-            supply += (coefficients.INCREASE_SUPPLY || 3) * m;
+            supply += coefficients.INCREASE_SUPPLY * m;
             break;
         case 'SUBCONTRACT':
-            supply += (coefficients.SUBCONTRACT || 3) * m;
+            supply += coefficients.SUBCONTRACT * m;
             break;
         case 'REDUCE_SUPPLY':
-            supply -= (coefficients.REDUCE_SUPPLY || 4) * m;
+            supply -= coefficients.REDUCE_SUPPLY * m;
             break;
         case 'RESTRICT_FLOW':
-            supply -= (coefficients.RESTRICT_FLOW || 4) * m;
+            supply -= coefficients.RESTRICT_FLOW * m;
             break;
         case 'SABOTAGE':
-            supply -= (coefficients.SABOTAGE || 4) * m;
+            supply -= coefficients.SABOTAGE * m;
             break;
         case 'INCREASE_DEMAND':
-            demand += (coefficients.INCREASE_DEMAND || 3) * m;
+            demand += coefficients.INCREASE_DEMAND * m;
             break;
         case 'MARKET':
-            demand += (coefficients.MARKET || 3) * m;
+            demand += coefficients.MARKET * m;
             break;
         case 'DECREASE_DEMAND':
-            demand -= (coefficients.DECREASE_DEMAND || 3) * m;
+            demand -= coefficients.DECREASE_DEMAND * m;
             break;
         case 'PRICE_LOW':
-            demand += (coefficients.PRICE_LOW || 2) * m;
+            demand += coefficients.PRICE_LOW * m;
             break;
         case 'SPECULATE':
-            demand += (coefficients.SPECULATE || 4) * m;
+            demand += coefficients.SPECULATE * m;
             // Optional: 10% chance of snapback (demand -10)
             if (Math.random() < 0.1) {
                 demand -= 10;

@@ -37,7 +37,8 @@ export function parseSimulationWeights(content: string): ActionCoefficients {
         }
         
         // Parse KEY=VALUE
-        const [key, value] = line.split('=').map(s => s.trim());
+        const [rawKey, value] = line.split('=').map(s => s.trim());
+        const key = rawKey.toUpperCase(); // Force the key to uppercase
         
         if (key && value) {
             const numValue = Number.parseFloat(value);
