@@ -1,10 +1,11 @@
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {
     chipsFor,
     competitionDiceFor,
     deriveEquilibrium,
     applyActionToSector,
-    tickSector
+    tickSector,
+    setSimulationCoefficients
 } from '../app/services/sim.ts';
 import type { Sector } from '../app/common/types';
 
@@ -137,5 +138,50 @@ describe('applyActionToSector', () => {
 
         const result = applyActionToSector(sector, action);
         expect(result.supply).toBe(100); // Should not exceed 100
+    });
+
+    describe('with externalized coefficients', () => {
+        it('uses custom coefficients when provided via setSimulationCoefficients', () => {
+            // Arrange: Set custom coefficients
+            setSimulationCoefficients({
+                INCREASE_SUPPLY: 10,
+                SUBCONTRACT: 10,
+                REDUCE_SUPPLY: 10,
+                RESTRICT_FLOW: 10,
+                SABOTAGE: 10,
+                INCREASE_DEMAND: 10,
+                MARKET: 10,
+                DECREASE_DEMAND: 10,
+                PRICE_LOW: 10,
+                SPECULATE: 10,
+            });
+
+            const sector = createSector({ supply: 50, demand: 50 });
+            const action = { sector: 'FOOD & WATER' as const, type: 'INCREASE_SUPPLY' as const, magnitude: 1 };
+
+            // Act
+            const result = applyActionToSector(sector, action);
+
+            // Assert: 50 + (10 * 1) = 60
+            expect(result.supply).toBe(60);
+        });
+
+        it('uses default coefficients when a coefficient is missing in the provided map', () => {
+            // Arrange: Provide a partial map (missing SABOTAGE)
+            // Note: setSimulationCoefficients merges with defaults
+            setSimulationCoefficients({
+                INCREASE_SUPPLY: 10,
+            });
+
+            const sector = createSector({ supply: 50 });
+            const action = { sector: 'FOOD & WATER' as const, type: 'SABOTAGE' as const, magnitude: 1 };
+
+            // Act
+            const result = applyActionToSector(sector, action);
+
+            // Assert: SABOTAGE should still be 4 (default)
+            // 50 - (4 * 1) = 46
+            expect(result.supply).toBe(46);
+        });
     });
 });
