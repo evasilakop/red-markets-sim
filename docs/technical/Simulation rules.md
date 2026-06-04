@@ -15,23 +15,38 @@
   - competitionUndercutDice: integer (Flooded=-2, Volatile=0, Subsidiary=-3, Scarce=-1; 0 means “no competition”)
 - priceIndex (user defined; display-only; not part of rules)
   
-## Equilibrium derivation (threshold model)
+## Equilibrium derivation (Threshold Model)
 
-- Normalize: S = supply/100; D = demand/100
-- Thresholds:
-  - HIGH band: ≥ 0.60
-  - LOW band: < 0.40
-  - Mid band: in-between
-- Primary rules:
-  - High supply, low demand → FLOODED (S ≥ HIGH and D < LOW)
-  - High supply, high demand → VOLATILE (S ≥ HIGH and D ≥ HIGH)
-  - Low supply, low demand → SUBSIDIARY (S < LOW and D < LOW)
-  - Low supply, high demand → SCARCE (S < LOW and D ≥ HIGH)
-- Tie-breaker (mid-range stabilization):
-  - Compute diff = S − D
-  - If diff > +0.10 → FLOODED
-  - If diff < −0.10 → SCARCE
-  - Otherwise: keep previous equilibrium to avoid jitter; if none, bias to VOLATILE when (S + D)/2 ≥ 0.50, else SUBSIDIARY
+Since the official *Red Markets* rules present states via a Supply/Demand chart rather than explicit mathematical formulas, the engine uses a **Threshold Model** to map continuous Supply/Demand values (0–100) to the four discrete equilibrium states.
+
+- **Normalization:** Convert inputs to scale $[0, 1]$ where $S = \text{supply}/100$ and $D = \text{demand}/100$.
+- **Core Thresholds:**
+  - **HIGH band:** $\ge 0.60$
+  - **LOW band:** $< 0.40$
+  - **MID band:** $0.40 \le \text{value} < 0.60$
+
+### Primary State Mapping
+The primary state is determined by the intersection of supply and demand bands:
+
+| State          | Supply Condition    | Demand Condition    | PDF Alignment             |
+|:---------------|:--------------------|:--------------------|:--------------------------|
+| **FLOODED**    | $S \ge \text{HIGH}$ | $D < \text{LOW}$    | High Supply / Low Demand  |
+| **VOLATILE**   | $S \ge \text{HIGH}$ | $D \ge \text{HIGH}$ | High Supply / High Demand |
+| **SUBSIDIARY** | $S < \text{LOW}$    | $D < \text{LOW}$    | Low Supply / Low Demand   |
+| **SCARCE**     | $S < \text{LOW}$    | $D \ge \text{HIGH}$ | Low Supply / High Demand  |
+
+### Tie-breaker (Mid-range Stabilization)
+To prevent "state jitter" when values hover near thresholds, a tie-breaker applies when values fall into the **MID band** or don't meet primary conditions:
+
+1. **Calculate Difference:** $\text{diff} = S - D$.
+2. **Significant Drift:**
+   - If $\text{diff} > +0.10 \rightarrow$ **FLOODED**
+   - If $\text{diff} < -0.10 \rightarrow$ **SCARCE**
+3. **Fallback (Stagnation/Activity):** If the difference is minimal ($|\text{diff}| \le 0.10$):
+   - **Keep Previous State:** To maintain stability during minor fluctuations.
+   - **Initial State Bias:** If no previous state exists:
+     - If $(S + D)/2 \ge 0.50 \rightarrow$ **VOLATILE** (Active market)
+     - Else $\rightarrow$ **SUBSIDIARY** (Stagnant market)
 
 ## Action effects
 
