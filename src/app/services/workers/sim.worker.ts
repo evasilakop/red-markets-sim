@@ -1,7 +1,7 @@
 import type {Sector, WorkerRequest, WorkerResponse} from '../../common/types.ts';
 import {applyActionToSector, tickSector} from '../sim.ts';
 
-self.onmessage = (e: MessageEvent<WorkerRequest>) => {
+globalThis.onmessage = (e: MessageEvent<WorkerRequest>) => {
     // Get id here so it is available for catch if needed.
     const { id } = e.data;
 

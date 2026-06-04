@@ -1,6 +1,6 @@
 import { type Equilibrium } from '../common/types';
 
-// Simple mapping for UI colors (using standard Material Design-ish colors)
+// Simple mapping for UI colours (using standard Material Design-ish colours)
 export const EQUILIBRIUM_COLORS: Record<Equilibrium, string> = {
     FLOODED: '#2e7d32',   // Green (Good/Cheap)
     VOLATILE: '#ed6c02',  // Orange (Warning)

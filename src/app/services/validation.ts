@@ -34,17 +34,17 @@ export const checkBrowserSupport = (): { supported: boolean; missingFeatures: st
     const missing: string[] = [];
 
     // Check for File API support (needed for file reading)
-    if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+    if (!globalThis.File || !globalThis.FileReader || !globalThis.FileList || !globalThis.Blob) {
         missing.push('File API');
     }
 
     // Check for JSON support (should be universal, but just in case)
-    if (!window.JSON) {
+    if (!globalThis.JSON) {
         missing.push('JSON parsing');
     }
 
     // Check for URL.createObjectURL (needed for file downloads)
-    if (!window.URL || !window.URL.createObjectURL) {
+    if (!globalThis.URL?.createObjectURL) {
         missing.push('File downloads');
     }
 
@@ -67,7 +67,7 @@ export const formatFileSize = (bytes: number): string => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 /**

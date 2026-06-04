@@ -2,7 +2,7 @@ import {useState, useEffect} from 'react';
 import {useCityData} from '../../hooks/useCityData';
 import {useSimWorker} from '../../hooks/useSimWorker';
 import {useMessages} from '../../hooks/useMessages.ts';
-import {updateSectorsInCity} from '../../services/worldService';
+import {updateSectorsInCity} from '../../services/cityService';
 import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
 import {Button, Group, Paper, Table, Text, Title, Slider, Badge, Stack} from '@mantine/core';
@@ -21,7 +21,7 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
 
     useEffect(() => {
         if (data?.city) {
-            console.log('DEBUG: Current City Data:', data.city);
+            console.debug('Current City Data:', data.city);
         }
     }, [data]);
 

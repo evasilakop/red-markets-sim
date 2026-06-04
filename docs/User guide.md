@@ -10,18 +10,18 @@ This simulator digitizes the economic rules of **Red Markets**, allowing Market 
 
 Every city (Enclave) consists of **10 Sectors**. Each sector represents a category of goods or services essential for survival in the Loss.
 
-| Sector | Description |
-| :--- | :--- |
-| **Food & Water** | Basic sustenance. |
-| **Shelter** | Housing and safety. |
-| **Material** | Raw resources for crafting/repair. |
-| **Energy** | Fuel, batteries, electricity. |
-| **Medicine** | Drugs, stims, medical care. |
-| **Products** | Manufactured goods (weapons, gear). |
-| **Speculative** | Luxuries, vices, and abstract value. |
-| **Transportation** | Vehicles and logistics. |
-| **Data** | Information, maps, software. |
-| **Human Resources** | Labor, skills, personnel. |
+| Sector              | Description                          |
+|:--------------------|:-------------------------------------|
+| **Food & Water**    | Basic sustenance.                    |
+| **Shelter**         | Housing and safety.                  |
+| **Material**        | Raw resources for crafting/repair.   |
+| **Energy**          | Fuel, batteries, electricity.        |
+| **Medicine**        | Drugs, stims, medical care.          |
+| **Products**        | Manufactured goods (weapons, gear).  |
+| **Speculative**     | Luxuries, vices, and abstract value. |
+| **Transportation**  | Vehicles and logistics.              |
+| **Data**            | Information, maps, software.         |
+| **Human Resources** | Labor, skills, personnel.            |
 
 ### Supply & Demand
 
@@ -38,35 +38,34 @@ The relationship between these two numbers determines the **Equilibrium State**.
 
 The economy is defined by the gap between Supply and Demand. This state determines the price of goods and the fierceness of the competition.
 
-### 1. Flooded (Supply >> Demand)
+### 1. Flooded (High Supply)
 
-* **Condition:** Supply is significantly higher than Demand (Difference > 20).
-* **Effect:** The market is saturated. Prices crash.
+* **Condition:** High supply and low demand.
+* **Effect:** A variety of providers and/or surplus of goods lower demand and prices. Everyone trades and no one prospers. Finer gradations of quality needed to stand out from a crowded market.
 * **Competition:** **High**. Rivals are desperate to offload stock.
   * *Undercut Dice:* **-2d10** (Competition rolls 2d10 and subtracts from your profit).
-* **Starting CHIPS:** 2 (Standard payout).
+* **Starting CHIPS:** 2.
 
-### 2. Volatile (Supply ≈ Demand)
+### 2. Volatile (Balanced)
 
-* **Condition:** Supply and Demand are roughly equal (within ±20).
+* **Condition:** Supply and demand are roughly equal.
 * **Effect:** The market is unpredictable but active.
 * **Competition:** **None**. The market absorbs goods easily.
   * *Undercut Dice:* **0**.
-* **Starting CHIPS:** 0 (Negotiation starts flat).
+* **Starting CHIPS:** 0.
 
-### 3. Subsidiary (Supply << Demand)
+### 3. Subsidiary (Low Activity)
 
-* **Condition:** Demand is significantly higher than Supply (Difference > 20).
-* **Effect:** The enclave is desperate for goods. Stability is threatened.
-* **Competition:** **Fierce**. The Enclave subsidizes imports, but major players dominate.
+* **Condition:** Low supply and low demand.
+* **Effect:** There isn’t much to choose from and no one cares. Demand is low. Supply shrinks. Returns are marginal. Minimal price difference between consumer and wholesale commodities.
+* **Competition:** **Fierce**.
   * *Undercut Dice:* **-3d10**.
-* **Starting CHIPS:** 3 (High payout due to subsidies).
+* **Starting CHIPS:** 3.
 
-### 4. Scarce (Supply < Demand but restricted)
+### 4. Scarce (High Demand)
 
-* **Condition:** Demand exceeds Supply, but flow is choked (or high-value items).
-* **Effect:** Prices soar, but finding buyers is hard.
-  * *Note in Sim:* Currently modeled as an extreme deficit state.
+* **Condition:** Shortages and/or a lack of service providers inflate pricing.
+* **Effect:** Textbook supply/demand disconnect. Optimal for a sustainable business, but constantly inviting competition.
 * **Competition:** **Moderate**.
   * *Undercut Dice:* **-1d10**.
 * **Starting CHIPS:** 1.

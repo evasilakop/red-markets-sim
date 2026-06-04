@@ -9,7 +9,7 @@ interface SectorRowProps {
     isBusy?: boolean;
 }
 
-export default function SectorRow({ sector, onAction, isBusy = false }: SectorRowProps) {
+export default function SectorRow({ sector, onAction, isBusy = false }: Readonly<SectorRowProps>) {
     const { label, color } = getEquilibriumDisplay(sector.equilibrium);
 
     // Helper to render the value + bar

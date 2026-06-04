@@ -1,5 +1,6 @@
 import type {Equilibrium, Sector, UserAction} from '../common/types.ts';
 import { parseSimulationWeights } from './configService';
+import {MAX_MAGNITUDE, MAX_SUPPLY, MIN_MAGNITUDE, MIN_SUPPLY} from "../common/constants.ts";
 
 // Note: In a real app, we would fetch this from a file/network. 
 // For now, we assume the config is available via an import or a static block 
@@ -30,37 +31,51 @@ export function setSimulationCoefficients(newCoeffs: ReturnType<typeof parseSimu
 }
 
 export function deriveEquilibrium(supply: number, demand: number, prev?: Equilibrium): Equilibrium {
-    const s = supply / 100, d = demand / 100;
-    const HIGH = 0.6, LOW = 0.4;
+    const s = supply / MAX_SUPPLY;
+    const d = demand / MAX_SUPPLY;
+    const HIGH = 0.6;
+    const LOW = 0.4;
+
     if (s >= HIGH && d < LOW) return 'FLOODED';
     if (s >= HIGH && d >= HIGH) return 'VOLATILE';
     if (s < LOW && d < LOW) return 'SUBSIDIARY';
     if (s < LOW && d >= HIGH) return 'SCARCE';
+
     const diff = s - d;
     if (diff > 0.1) return 'FLOODED';
     if (diff < -0.1) return 'SCARCE';
+
     return prev ?? ((s + d) / 2 >= 0.5 ? 'VOLATILE' : 'SUBSIDIARY');
 }
 
-export function chipsFor(eq: Equilibrium) {
-    return eq === 'FLOODED' ? 2 : eq === 'VOLATILE' ? 0 : eq === 'SUBSIDIARY' ? 3 : 1;
+export function chipsFor(eq: Equilibrium): number {
+    const chipMap: Record<Equilibrium, number> = {
+        FLOODED: 2,
+        VOLATILE: 0,
+        SUBSIDIARY: 3,
+        SCARCE: 1
+    };
+    return chipMap[eq];
 }
 
-export function competitionDiceFor(eq: Equilibrium) {
-    return eq === 'FLOODED' ? -2 : eq === 'VOLATILE' ? 0 : eq === 'SUBSIDIARY' ? -3 : -1;
+export function competitionDiceFor(eq: Equilibrium): number {
+    const diceMap: Record<Equilibrium, number> = {
+        FLOODED: -2,
+        VOLATILE: 0,
+        SUBSIDIARY: -3,
+        SCARCE: -1
+    };
+    return diceMap[eq];
 }
 
-const clamp = (x: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, x));
+const clamp = (x: number, lo = MIN_SUPPLY, hi = MAX_SUPPLY) => Math.max(lo, Math.min(hi, x));
 
-// helper function to apply noise to the simulated actions
+/**
+ * Applies ambient noise (-2 to +2) to a sector.
+ */
 function applyNoise(sector: Sector): Sector {
-    let { supply, demand } = sector;
-
-    // Apply ambient noise (-2 to +2)
-    supply = clamp(supply + Math.floor(Math.random() * 5) - 2);
-    demand = clamp(demand + Math.floor(Math.random() * 5) - 2);
-
-    // Re-derive equilibrium after noise
+    const supply = clamp(sector.supply + Math.floor(Math.random() * 5) - 2);
+    const demand = clamp(sector.demand + Math.floor(Math.random() * 5) - 2);
     const equilibrium = deriveEquilibrium(supply, demand, sector.equilibrium);
 
     return {
@@ -75,9 +90,8 @@ function applyNoise(sector: Sector): Sector {
 }
 
 export function applyActionToSector(sector: Sector, action: UserAction): Sector {
-    let supply = sector.supply;
-    let demand = sector.demand;
-    const m = Math.max(0, Math.min(10, action.magnitude)); // clamp magnitude 0-10
+    let { supply, demand } = sector;
+    const m = Math.max(MIN_MAGNITUDE, Math.min(MAX_MAGNITUDE, action.magnitude));
 
     // Apply action effects based on type using externalized coefficients
     switch (action.type) {
@@ -133,10 +147,9 @@ export function applyActionToSector(sector: Sector, action: UserAction): Sector 
         competitionUndercutDice: competitionDiceFor(equilibrium),
         updatedAt: Date.now()
     };
-} 
-
+}
 
 export function tickSector(sector: Sector): Sector {
-    // Tick now EXPLICITLY applies noise
+    // Tick EXPLICITLY applies noise
     return applyNoise(sector);
 }

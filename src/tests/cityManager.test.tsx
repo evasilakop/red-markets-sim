@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CityManager from '../app/components/CityManager/CityManager';
-import * as worldService from '../app/services/worldService';
+import * as cityService from '../app/services/cityService';
 import { renderWithProviders, createTestDb } from './test-utils';
 import { mockWorld, mockCities } from './fixtures';
 import * as dbModule from '../app/services/db';
@@ -45,11 +45,11 @@ describe('CityManager', () => {
         vi.spyOn(dbModule, 'db', 'get').mockReturnValue(testDb);
 
         // Mock service calls that we don't want to hit the real implementation of
-        vi.spyOn(worldService, 'addCity').mockResolvedValue({
+        vi.spyOn(cityService, 'addCity').mockResolvedValue({
             sectors: [],
             city: mockCities[0]
         });
-        vi.spyOn(worldService, 'removeCity').mockResolvedValue({ success: true, message: 'City deleted successfully.' });
+        vi.spyOn(cityService, 'removeCity').mockResolvedValue({ success: true, message: 'City deleted successfully.' });
     });
 
     afterEach(async () => {
@@ -98,7 +98,7 @@ describe('CityManager', () => {
             const createBtn = screen.getByRole('button', { name: /^Create$/i });
             await user.click(createBtn);
 
-            expect(worldService.addCity).toHaveBeenCalledWith('world-1', 'New Test City');
+            expect(cityService.addCity).toHaveBeenCalledWith('world-1', 'New Test City');
         });
     });
 
@@ -120,7 +120,7 @@ describe('CityManager', () => {
             const confirmBtn = screen.getByRole('button', { name: 'Delete City' });
             await user.click(confirmBtn);
 
-            expect(worldService.removeCity).toHaveBeenCalledWith('city-1');
+            expect(cityService.removeCity).toHaveBeenCalledWith('city-1');
         });
     });
 });
