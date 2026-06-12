@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
     // Tells the browser where the app root is
-    base: '/red-markets-sim/',
+    base: '/',
     plugins: [
         react(),
         VitePWA({

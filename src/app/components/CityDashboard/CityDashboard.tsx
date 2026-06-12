@@ -5,8 +5,9 @@ import {useMessages} from '../../hooks/useMessages.ts';
 import {updateSectorsInCity} from '../../services/cityService';
 import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
+import EditCityModal from './EditCityModal';
 import {Button, Group, Paper, Table, Text, Title, Slider, Badge, Stack} from '@mantine/core';
-import {IconSettings, IconUsers, IconShield, IconMicroscope} from '@tabler/icons-react';
+import {IconSettings, IconUsers, IconShield, IconMicroscope, IconPencil} from '@tabler/icons-react';
 
 interface CityDashboardProps {
     cityId: string | null;
@@ -18,6 +19,7 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
     const {showSuccess, showError} = useMessages();
     const [visibleRows, setVisibleRows] = useState(10);
     const [showSettings, setShowSettings] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     useEffect(() => {
         if (data?.city) {
@@ -102,17 +104,26 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
             {/* Header Section */}
             <Group justify={'space-between'} align={'start'} w={'100%'}>
                 <Stack gap={0}>
-                    <Group justify={'left'} align={'center'}>
+                    <Group justify={'left'} align={'center'} gap={'0'}>
                         <Title order={2}>{city.name} Market</Title>
-                        <Button
-                            variant={'subtle'}
-                            color={'gray'}
-                            onClick={() => setShowSettings(!showSettings)}
-                            aria-label={'City Dashboard Settings'}
-                            size={'compact-xs'}
-                        >
-                            <IconSettings size={20} />
-                        </Button>
+                         <Button
+                             variant={'subtle'}
+                             color={'gray'}
+                             onClick={() => setShowSettings(!showSettings)}
+                             aria-label={'City Dashboard Settings'}
+                             size={'compact-xs'}
+                         >
+                             <IconSettings size={20} />
+                         </Button>
+                         <Button
+                             variant={'subtle'}
+                             color={'gray'}
+                             onClick={() => setIsEditModalOpen(true)}
+                             aria-label={'Edit City'}
+                             size={'compact-xs'}
+                         >
+                             <IconPencil size={20} />
+                         </Button>
                         {showSettings && (
                             <Group gap={'xs'} wrap={'nowrap'} align={'center'}>
                                 <Text size={'xs'} c={'dimmed'}>Table Size</Text>
@@ -187,6 +198,12 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
                     </Table.Tbody>
                 </Table>
             </Table.ScrollContainer>
+            <EditCityModal
+                opened={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                city={city}
+                onSaved={() => { /* Optional: refresh or toast */ }}
+            />
         </Paper>
     );
 }

@@ -38,7 +38,7 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
     };
 
     // Initialize 10 sectors with random supply/demand around 50
-    const sectors: Sector[] = ALL_SECTORS.map((type) => {
+    const sectors: Sector[] = ALL_SECTORS.map((sectorType) => {
         const supply = 50 + Math.floor(Math.random() * 11) - 5; // 45-55 range
         const demand = 50 + Math.floor(Math.random() * 11) - 5; // 45-55 range
         const equilibrium = deriveEquilibrium(supply, demand);
@@ -46,7 +46,7 @@ export async function addCity(worldId: string, name: string): Promise<{ city: Ci
         return {
             id: uid(),
             cityId: city.id,
-            type,
+            type: sectorType,
             supply,
             demand,
             equilibrium,
@@ -115,6 +115,13 @@ export async function updateSectorsInCity(cityId: string, updatedSectors: Sector
         await db.sectors.bulkPut(updatedSectors);
         await db.cities.update(cityId, { lastTick: Date.now() });
     });
+}
+
+/**
+ * Updates city basic info.
+ */
+export async function updateCity(cityId: string, updates: Partial<City>): Promise<void> {
+    await db.cities.update(cityId, updates);
 }
 
 /**
