@@ -1,10 +1,11 @@
 import {useEffect, useState} from 'react';
-import {addCity, removeCity, listCities} from '../../services/cityService.ts';
+import {removeCity, listCities} from '../../services/cityService.ts';
 import type {City, World} from '../../common/types.ts';
 import {useMessages} from '../../hooks/useMessages.ts';
-import {Button, Chip, Group, Paper, Stack, Text, TextInput, Title} from '@mantine/core';
+import {Button, Chip, Group, Paper, Stack, Text, Title} from '@mantine/core';
 import {modals} from '@mantine/modals';
 import {useLiveQuery} from 'dexie-react-hooks';
+import AddCityWizard from './AddCityWizard';
 
 /**
  * Props for the CityManager component.
@@ -27,12 +28,13 @@ interface CityManagerProps {
  * @returns The rendered CityManager component
  */
 export default function CityManager({
-                                        selectedWorld,
-                                        selectedCity,
-                                        onCitySelect
-                                    }: Readonly<CityManagerProps>) {
+                                         selectedWorld,
+                                         selectedCity,
+                                         onCitySelect
+                                     }: Readonly<CityManagerProps>) {
     const {showSuccess, showError} = useMessages();
     const [isDeleting, setIsDeleting] = useState(false);
+    const [wizardOpened, setWizardOpened] = useState(false);
 
     // Reactive subscription to cities in the selected world
     const cities = useLiveQuery(
@@ -54,50 +56,9 @@ export default function CityManager({
 
     /*
     =====================================================================
-                               Event handlers
+                                Event handlers
     =====================================================================
-     */
-    /**
-     * Creates a new city in the currently selected world and updates the list.
-     * Auto-selects the newly created city.
-     */
-    const handleAddCity = () => {
-        if (!selectedWorld) return;
-
-        // 1. Create a variable to hold the value
-        let nameInput = '';
-
-        modals.openConfirmModal({
-            title: "Add City",
-            centered: true,
-            children: (
-                <TextInput
-                    label={'Enter a name for the new city:'}
-                    placeholder={'City name'}
-                    data-autofocus
-                    // Capture the user's typing
-                    onChange={(e) => { nameInput = e.currentTarget.value; }}
-                />
-            ),
-            labels: { confirm: 'Create', cancel: 'Cancel' },
-            confirmProps: { color: 'green' },
-
-            // Move the logic INSIDE here
-            onConfirm: async () => {
-                const finalName = nameInput.trim() || 'New City';
-
-                try {
-                    const { city } = await addCity(selectedWorld.id, finalName);
-                    // We no longer need to manually refresh; useLiveQuery handles it
-                    onCitySelect(city);
-                } catch (e) {
-                    showError("Could not create city");
-                    console.error(e);
-                }
-            }
-        });
-    };
-
+    */
     /**
      * Triggers the confirmation dialog for city deletion.
      * Validates that a city and world are currently selected.
@@ -109,7 +70,7 @@ export default function CityManager({
             title: 'Delete City',
             centered: true,
             children: (
-                <Text size={"sm"}>
+                <Text size={'sm'}>
                     Are you sure you want to delete <strong>{selectedCity.name}</strong>?
                     This will remove all sectors. This action cannot be undone.
                 </Text>
@@ -148,7 +109,7 @@ export default function CityManager({
 
     /*
     =====================================================================
-                                Render
+                                 Render
     =====================================================================
     */
     return (
@@ -162,7 +123,7 @@ export default function CityManager({
                                     color={'green.9'}
                                     c={'white'}
                                     variant={'filled'}
-                                    onClick={handleAddCity}>
+                                    onClick={() => setWizardOpened(true)}>
                                 Add City
                             </Button>
                             {selectedCity && (
@@ -191,10 +152,10 @@ export default function CityManager({
                             >
                                 {cities.map(city => (
                                     <Chip key={city.id}
-                                          value={city.id}
-                                          size={'sm'}
-                                          color={'cyan'}
-                                    >
+                                            value={city.id}
+                                            size={'sm'}
+                                            color={'cyan'}
+                                      >
                                         {city.name}
                                     </Chip>
                                 ))}
@@ -207,6 +168,14 @@ export default function CityManager({
                     )}
                 </Stack>
             )}
+            <AddCityWizard 
+                opened={wizardOpened} 
+                onClose={() => setWizardOpened(false)} 
+                onCreated={() => {
+                    setWizardOpened(false);
+                }}
+                worldId={selectedWorld?.id || ''}
+            />
         </Paper>
     );
 }
