@@ -2,16 +2,32 @@ import { screen, fireEvent, waitFor, render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
+import { ALL_SECTORS, type SectorType } from '../../../app/common/types';
 import { renderWithProviders } from '../../test-utils';
 import AddCityWizard from '../../../app/components/CityManager/AddCityWizard';
 import * as cityService from '../../../app/services/cityService';
 
-vi.mock('../../../app/services/cityService', () => ({
-    addCity: vi.fn().mockResolvedValue({
-        city: { id: 'test-city', name: 'Test City' },
-        sectors: [],
-    }),
-}));
+/**
+ * Builds a full sector map with uniform supply/demand for test fixtures.
+ */
+function buildSectorMap(supply: number, demand: number): Record<SectorType, { supply: number; demand: number }> {
+    return ALL_SECTORS.reduce(
+        (acc, type) => ({ ...acc, [type]: { supply, demand } }),
+        {} as Record<SectorType, { supply: number; demand: number }>
+    );
+}
+
+vi.mock('../../../app/services/cityService', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../../app/services/cityService')>();
+    return {
+        ...actual,
+        addCity: vi.fn().mockResolvedValue({
+            city: { id: 'test-city', name: 'Test City' },
+            sectors: [],
+        }),
+        generateRandomSectors: vi.fn(() => buildSectorMap(50, 50)),
+    };
+});
 
 vi.mock('@mantine/notifications', () => ({
     notifications: {
@@ -30,6 +46,7 @@ describe('AddCityWizard', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(cityService.generateRandomSectors).mockImplementation(() => buildSectorMap(50, 50));
     });
 
     it('renders the first step (Basic Info)', () => {
@@ -56,27 +73,46 @@ describe('AddCityWizard', () => {
         expect(screen.getByText(/Review/i)).toBeInTheDocument();
     });
 
-    it('shows random sector message on review in random mode', async () => {
+    it('shows pre-generated sector values on review in random mode', async () => {
+        vi.mocked(cityService.generateRandomSectors).mockReturnValue({
+            ...buildSectorMap(50, 50),
+            'FOOD & WATER': { supply: 47, demand: 52 },
+        });
+
         renderWithProviders(<AddCityWizard {...defaultProps} />);
 
         fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Random City' } });
         fireEvent.click(screen.getByRole('button', { name: /Next/i }));
 
-        expect(screen.getByText(/randomly generated with supply and demand between 45 and 55/i)).toBeInTheDocument();
+        expect(screen.getByText('47/52')).toBeInTheDocument();
     });
 
-    it('shows Sector Config step when "Custom Sectors" is selected', async () => {
+    it('regenerates sector values when Random Sectors is clicked again', async () => {
+        renderWithProviders(<AddCityWizard {...defaultProps} />);
+
+        expect(cityService.generateRandomSectors).toHaveBeenCalled();
+
+        vi.mocked(cityService.generateRandomSectors).mockClear();
+        fireEvent.click(screen.getByText(/Random Sectors/i));
+
+        expect(cityService.generateRandomSectors).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows Sector Values step when "Custom Sectors" is selected', async () => {
         renderWithProviders(<AddCityWizard {...defaultProps} />);
 
         fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Custom City' } });
         fireEvent.click(screen.getByText(/Custom Sectors/i));
         fireEvent.click(screen.getByRole('button', { name: /Next/i }));
 
-        expect(screen.getByText(/Sector Config/i)).toBeInTheDocument();
+        expect(screen.getByText(/Sector Values/i)).toBeInTheDocument();
         expect(screen.getByText(/Supply \(0-100\)/i)).toBeInTheDocument();
     });
 
-    it('calls addCity with correct data on confirmation (random mode)', async () => {
+    it('calls addCity with pre-generated sectors on confirmation (random mode)', async () => {
+        const randomSectors = buildSectorMap(48, 51);
+        vi.mocked(cityService.generateRandomSectors).mockReturnValue(randomSectors);
+
         renderWithProviders(<AddCityWizard {...defaultProps} />);
 
         fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Final City' } });
@@ -88,7 +124,7 @@ describe('AddCityWizard', () => {
             expect(cityService.addCity).toHaveBeenCalledWith(
                 'test-world',
                 expect.objectContaining({ name: 'Final City' }),
-                undefined
+                randomSectors
             );
             expect(defaultProps.onCreated).toHaveBeenCalled();
             expect(defaultProps.onClose).toHaveBeenCalled();

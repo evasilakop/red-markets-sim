@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Modal, Stepper, Button, Group, Stack, Text, Divider, Table, Title, Badge } from '@mantine/core';
-import { type City, type SectorType, ALL_SECTORS } from '../../common/types';
-import { addCity } from '../../services/cityService';
+import { type City, ALL_SECTORS } from '../../common/types';
+import { addCity, generateRandomSectors } from '../../services/cityService';
 import CityBasicInfoForm from '../CityDashboard/CityBasicInfoForm';
 import SectorConfigGrid from './SectorConfigGrid';
-import { chipsFor, deriveEquilibrium } from '../../services/sim';
+import { chipsFor, competitionDiceFor, deriveEquilibrium } from '../../services/sim';
 import { useMessages } from '../../hooks/useMessages';
 
 interface AddCityWizardProps {
@@ -21,16 +21,6 @@ const DEFAULT_CITY_INFO: Partial<City> = {
 };
 
 /**
- * Builds the default supply/demand map for all sectors (50/50 baseline).
- */
-function createDefaultCustomSectors(): Record<SectorType, { supply: number; demand: number }> {
-    return ALL_SECTORS.reduce(
-        (acc, type) => ({ ...acc, [type]: { supply: 50, demand: 50 } }),
-        {} as Record<SectorType, { supply: number; demand: number }>
-    );
-}
-
-/**
  * Multistep wizard for creating a new city.
  * Allows GMs to define basic stats and choose between random or custom sector values.
  */
@@ -42,7 +32,7 @@ export default function AddCityWizard({ opened, onClose, onCreated, worldId }: R
 
     const [cityInfo, setCityInfo] = useState<Partial<City>>(DEFAULT_CITY_INFO);
 
-    const [customSectors, setCustomSectors] = useState(createDefaultCustomSectors);
+    const [customSectors, setCustomSectors] = useState(generateRandomSectors);
 
     /** Resets wizard state whenever the modal is opened. */
     useEffect(() => {
@@ -51,9 +41,18 @@ export default function AddCityWizard({ opened, onClose, onCreated, worldId }: R
             setMode('random');
             setIsSubmitting(false);
             setCityInfo(DEFAULT_CITY_INFO);
-            setCustomSectors(createDefaultCustomSectors());
+            setCustomSectors(generateRandomSectors());
         }
     }, [opened]);
+
+    const handleSelectRandomMode = () => {
+        setMode('random');
+        setCustomSectors(generateRandomSectors());
+    };
+
+    const handleSelectCustomMode = () => {
+        setMode('custom');
+    };
 
     const handleNext = () => {
         if (mode === 'random') {
@@ -74,7 +73,7 @@ export default function AddCityWizard({ opened, onClose, onCreated, worldId }: R
     const handleConfirm = async () => {
         setIsSubmitting(true);
         try {
-            await addCity(worldId, cityInfo, mode === 'custom' ? customSectors : undefined);
+            await addCity(worldId, cityInfo, customSectors);
             showSuccess(`City "${cityInfo.name?.trim() || 'Untitled'}" created!`);
             onCreated();
             onClose();
@@ -100,13 +99,13 @@ export default function AddCityWizard({ opened, onClose, onCreated, worldId }: R
                         <Group>
                             <Button
                                 variant={mode === 'random' ? 'filled' : 'outline'}
-                                onClick={() => setMode('random')}
+                                onClick={handleSelectRandomMode}
                             >
                                 Random Sectors
                             </Button>
                             <Button
                                 variant={mode === 'custom' ? 'filled' : 'outline'}
-                                onClick={() => setMode('custom')}
+                                onClick={handleSelectCustomMode}
                             >
                                 Custom Sectors
                             </Button>
@@ -169,56 +168,47 @@ export default function AddCityWizard({ opened, onClose, onCreated, worldId }: R
                         )}
 
                         <Divider label={'Sector Economy'} my={'md'} />
-                        {mode === 'random' ? (
-                            <Text size={'sm'} c={'dimmed'}>
-                                Sectors will be randomly generated with supply and demand between 45 and 55.
-                            </Text>
-                        ) : (
-                            <Table verticalSpacing={'xs'}>
-                                <thead>
-                                    <tr>
-                                        <th>Sector</th>
-                                        <th>S/D</th>
-                                        <th>Equilibrium</th>
-                                        <th>Derived</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                  {ALL_SECTORS.map(type => {
-                                      const isCustom = mode === 'custom';
-                                      const s = isCustom ? customSectors[type] : { supply: 50, demand: 50 };
-                                      const eq = deriveEquilibrium(s.supply, s.demand);
-                                      // noinspection SpellCheckingInspection
-                                      return (
-                                          <tr key={type}>
-                                              <Table.Td>
-                                                  <Text size={'sm'}>{type}</Text>
-                                              </Table.Td>
-                                              <Table.Td>
-                                                  <Text size={'sm'}>{isCustom ? `${s.supply}/${s.demand}` : 'Random'}</Text>
-                                              </Table.Td>
-                                              <Table.Td>
-                                                  <Stack gap={2}>
-                                                      <Group gap={8} wrap={'nowrap'} title={'Equilibrium'}>
-                                                          <Text size={'xs'} c={'dimmed'} fw={700} w={45}>EQUIL</Text>
-                                                          <Text size={'sm'} w={80} ta={'left'}>{isCustom ? eq : 'Random'}</Text>
-                                                      </Group>
-                                                  </Stack>
-                                              </Table.Td>
-                                              <Table.Td>
-                                                  <Stack gap={2}>
-                                                      <Group gap={8} wrap={'nowrap'} title={'Starting Chips'}>
-                                                          <Text size={'xs'} c={'dimmed'} fw={700} w={45}>CHIPS</Text>
-                                                          <Text size={'sm'} w={20} ta={'center'}>{isCustom ? chipsFor(eq) : 'Random'}</Text>
-                                                      </Group>
-                                                  </Stack>
-                                              </Table.Td>
-                                          </tr>
-                                      );
-                                  })}
-                                </tbody>
-                            </Table>
-                        )}
+                        <Table verticalSpacing={'xs'}>
+                            <thead>
+                                <tr>
+                                    <th>Sector</th>
+                                    <th>S/D</th>
+                                    <th>Equilibrium</th>
+                                    <th>Derived</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ALL_SECTORS.map(type => {
+                                    const s = customSectors[type];
+                                    const eq = deriveEquilibrium(s.supply, s.demand);
+                                    return (
+                                        <tr key={type}>
+                                            <Table.Td>
+                                                <Text size={'sm'}>{type}</Text>
+                                            </Table.Td>
+                                            <Table.Td>
+                                                <Text size={'sm'}>{s.supply}/{s.demand}</Text>
+                                            </Table.Td>
+                                            <Table.Td>
+                                                <Text size={'sm'}>{eq}</Text>
+                                            </Table.Td>
+                                            <Table.Td>
+                                                <Stack gap={2}>
+                                                    <Group gap={8} wrap={'nowrap'} title={'Starting Chips'}>
+                                                        <Text size={'xs'} c={'dimmed'} fw={700} w={45}>CHIPS</Text>
+                                                        <Text size={'sm'} w={20} ta={'center'}>{chipsFor(eq)}</Text>
+                                                    </Group>
+                                                    <Group gap={8} wrap={'nowrap'} title={'Competition Dice'}>
+                                                        <Text size={'xs'} c={'dimmed'} fw={700} w={45}>COMP</Text>
+                                                        <Text size={'sm'} w={20} ta={'center'}>{competitionDiceFor(eq)}</Text>
+                                                    </Group>
+                                                </Stack>
+                                            </Table.Td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </Table>
 
                         <Group justify={'flex-end'} mt={'xl'}>
                             <Button variant={'default'} onClick={handleBack} disabled={isSubmitting}>Back</Button>

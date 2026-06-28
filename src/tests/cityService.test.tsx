@@ -39,6 +39,20 @@ describe('cityService', () => {
         vi.restoreAllMocks();
     });
 
+    describe('generateRandomSectors', () => {
+        it('should return values for all 10 sectors in the 45-55 range', () => {
+            const sectors = cityService.generateRandomSectors();
+
+            expect(Object.keys(sectors)).toHaveLength(10);
+            Object.values(sectors).forEach(({ supply, demand }) => {
+                expect(supply).toBeGreaterThanOrEqual(45);
+                expect(supply).toBeLessThanOrEqual(55);
+                expect(demand).toBeGreaterThanOrEqual(45);
+                expect(demand).toBeLessThanOrEqual(55);
+            });
+        });
+    });
+
     describe('addCity', () => {
         it('should create a city with random sectors when no custom sectors provided', async () => {
             const cityInfo = { name: 'Random City', population: 2000 };

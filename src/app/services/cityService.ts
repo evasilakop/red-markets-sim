@@ -22,6 +22,27 @@ function clampSupplyDemand(value: number): number {
 const uid = generateId;
 
 /**
+ * Generates a single random supply/demand pair in the 45–55 range.
+ */
+function randomSupplyDemand(): { supply: number; demand: number } {
+    return {
+        supply: 50 + Math.floor(Math.random() * 11) - 5,
+        demand: 50 + Math.floor(Math.random() * 11) - 5,
+    };
+}
+
+/**
+ * Generates random supply/demand values (45–55 range) for all sectors.
+ * Used by the city creation wizard so GMs can review values before saving.
+ */
+export function generateRandomSectors(): Record<SectorType, { supply: number; demand: number }> {
+    return ALL_SECTORS.reduce(
+        (acc, sectorType) => ({ ...acc, [sectorType]: randomSupplyDemand() }),
+        {} as Record<SectorType, { supply: number; demand: number }>
+    );
+}
+
+/**
  * Fetches a city and all its associated sectors.
  * Used by hooks and components to avoid direct db access.
  */
@@ -57,13 +78,13 @@ export async function addCity(
         // If customSectors is provided, we MUST use the provided value for EVERY sector.
         // If a specific sector is missing from customSectors, we fall back to random
         // but logically, if the mode is 'custom', the UI should provide all.
-        if (customSectors && customSectors[sectorType]) {
+        if (customSectors?.[sectorType]) {
             supply = clampSupplyDemand(customSectors[sectorType].supply);
             demand = clampSupplyDemand(customSectors[sectorType].demand);
         } else {
-            // Default random values (45-55 range)
-            supply = 50 + Math.floor(Math.random() * 11) - 5;
-            demand = 50 + Math.floor(Math.random() * 11) - 5;
+            const random = randomSupplyDemand();
+            supply = random.supply;
+            demand = random.demand;
         }
 
         const equilibrium = deriveEquilibrium(supply, demand);

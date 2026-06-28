@@ -100,7 +100,7 @@ describe('CityManager', () => {
             expect(cityService.addCity).toHaveBeenCalledWith(
                 'world-1',
                 expect.objectContaining({ name: 'New Test City' }),
-                undefined
+                expect.any(Object)
             );
         });
     });
