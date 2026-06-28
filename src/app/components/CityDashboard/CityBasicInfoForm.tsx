@@ -61,7 +61,7 @@ export default function CityBasicInfoForm({ values, onChange }: Readonly<CityBas
                 label={'Imports'}
                 value={values.imports || []}
                 onChange={(val) => onChange({ imports: val })}
-                placeholder={'Add import tags'}
+                placeholder={'Goods and services that the city imports'}
             />
         </Stack>
     );
