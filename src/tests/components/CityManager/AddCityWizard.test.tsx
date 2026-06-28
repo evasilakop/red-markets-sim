@@ -61,7 +61,7 @@ describe('AddCityWizard', () => {
         expect(nextButton).toBeDisabled();
     });
 
-    it('allows moving to next step when name is provided', async () => {
+    it('allows moving to Sector Values step when name is provided', async () => {
         renderWithProviders(<AddCityWizard {...defaultProps} />);
         const nameInput = screen.getByLabelText(/Name/i);
         fireEvent.change(nameInput, { target: { value: 'New City' } });
@@ -70,10 +70,10 @@ describe('AddCityWizard', () => {
         expect(nextButton).not.toBeDisabled();
         fireEvent.click(nextButton);
 
-        expect(screen.getByText(/Review/i)).toBeInTheDocument();
+        expect(screen.getByText(/Sector Values/i)).toBeInTheDocument();
     });
 
-    it('shows pre-generated sector values on review in random mode', async () => {
+    it('shows pre-generated sector values on Sector Values step in random mode', async () => {
         vi.mocked(cityService.generateRandomSectors).mockReturnValue({
             ...buildSectorMap(50, 50),
             'FOOD & WATER': { supply: 47, demand: 52 },
@@ -84,7 +84,17 @@ describe('AddCityWizard', () => {
         fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Random City' } });
         fireEvent.click(screen.getByRole('button', { name: /Next/i }));
 
-        expect(screen.getByText('47/52')).toBeInTheDocument();
+        expect(screen.getByText('47')).toBeInTheDocument();
+        expect(screen.getByText('52')).toBeInTheDocument();
+    });
+
+    it('uses read-only sector grid on Step 2 in random mode', async () => {
+        renderWithProviders(<AddCityWizard {...defaultProps} />);
+
+        fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Random City' } });
+        fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+
+        expect(screen.queryAllByRole('textbox')).toHaveLength(0);
     });
 
     it('regenerates sector values when Random Sectors is clicked again', async () => {
@@ -96,6 +106,59 @@ describe('AddCityWizard', () => {
         fireEvent.click(screen.getByText(/Random Sectors/i));
 
         expect(cityService.generateRandomSectors).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows Re-roll button on Sector Values step in random mode and updates values', async () => {
+        let callCount = 0;
+        vi.mocked(cityService.generateRandomSectors).mockImplementation(() => {
+            callCount++;
+            if (callCount >= 3) {
+                return {
+                    ...buildSectorMap(50, 50),
+                    'FOOD & WATER': { supply: 45, demand: 48 },
+                };
+            }
+            return {
+                ...buildSectorMap(50, 50),
+                'FOOD & WATER': { supply: 47, demand: 52 },
+            };
+        });
+
+        renderWithProviders(<AddCityWizard {...defaultProps} />);
+
+        fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Random City' } });
+        fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+
+        expect(screen.getByRole('button', { name: /Re-roll/i })).toBeInTheDocument();
+        expect(screen.getByText('47')).toBeInTheDocument();
+        expect(screen.getByText('52')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: /Re-roll/i }));
+
+        expect(screen.getByText('45')).toBeInTheDocument();
+        expect(screen.getByText('48')).toBeInTheDocument();
+        expect(screen.queryByText('47')).not.toBeInTheDocument();
+    });
+
+    it('does not show Re-roll button on Sector Values step in custom mode', async () => {
+        renderWithProviders(<AddCityWizard {...defaultProps} />);
+
+        fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Custom City' } });
+        fireEvent.click(screen.getByText(/Custom Sectors/i));
+        fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+
+        expect(screen.queryByRole('button', { name: /Re-roll/i })).not.toBeInTheDocument();
+    });
+
+    it('does not show Re-roll button on Review step', async () => {
+        renderWithProviders(<AddCityWizard {...defaultProps} />);
+
+        fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Random City' } });
+        fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+
+        expect(screen.getByText(/Review/i)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Re-roll/i })).not.toBeInTheDocument();
     });
 
     it('shows Sector Values step when "Custom Sectors" is selected', async () => {
@@ -116,6 +179,7 @@ describe('AddCityWizard', () => {
         renderWithProviders(<AddCityWizard {...defaultProps} />);
 
         fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Final City' } });
+        fireEvent.click(screen.getByRole('button', { name: /Next/i }));
         fireEvent.click(screen.getByRole('button', { name: /Next/i }));
 
         fireEvent.click(screen.getByRole('button', { name: /Confirm & Create City/i }));

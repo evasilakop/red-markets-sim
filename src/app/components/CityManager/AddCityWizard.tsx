@@ -54,20 +54,16 @@ export default function AddCityWizard({ opened, onClose, onCreated, worldId }: R
         setMode('custom');
     };
 
+    const handleReroll = () => {
+        setCustomSectors(generateRandomSectors());
+    };
+
     const handleNext = () => {
-        if (mode === 'random') {
-            setActiveStep(2);
-        } else {
-            setActiveStep(prev => prev + 1);
-        }
+        setActiveStep(prev => prev + 1);
     };
 
     const handleBack = () => {
-        if (activeStep === 2 && mode === 'random') {
-            setActiveStep(0);
-        } else {
-            setActiveStep(prev => prev - 1);
-        }
+        setActiveStep(prev => prev - 1);
     };
 
     const handleConfirm = async () => {
@@ -119,17 +115,33 @@ export default function AddCityWizard({ opened, onClose, onCreated, worldId }: R
 
                 <Stepper.Step label={'Sector Values'} description={'Supply and Demand'}>
                     <Stack gap={'md'} mt={'md'}>
-                        <Text size={'sm'} c={'dimmed'}>
-                            Configure the supply and demand for each sector to set the initial economic state.
-                        </Text>
-                        <SectorConfigGrid
-                            values={customSectors}
-                            onChange={(type, updates) =>
-                                setCustomSectors(prev => ({
-                                ...prev,
-                                [type]: { ...prev[type], ...updates },
-                            }))}
-                        />
+                        {mode === 'random' ? (
+                            <>
+                                <Group justify={'space-between'} align={'center'}>
+                                    <Text size={'sm'} c={'dimmed'}>
+                                        Review generated values. Re-roll for a new economy, or proceed to confirm.
+                                    </Text>
+                                    <Button variant={'outline'} size={'xs'} onClick={handleReroll}>
+                                        Re-roll
+                                    </Button>
+                                </Group>
+                                <SectorConfigGrid values={customSectors} readOnly />
+                            </>
+                        ) : (
+                            <>
+                                <Text size={'sm'} c={'dimmed'}>
+                                    Configure the supply and demand for each sector to set the initial economic state.
+                                </Text>
+                                <SectorConfigGrid
+                                    values={customSectors}
+                                    onChange={(type, updates) =>
+                                        setCustomSectors(prev => ({
+                                            ...prev,
+                                            [type]: { ...prev[type], ...updates },
+                                        }))}
+                                />
+                            </>
+                        )}
                         <Group justify={'flex-end'} mt={'xl'}>
                             <Button variant={'default'} onClick={handleBack}>Back</Button>
                             <Button onClick={handleNext}>Next</Button>

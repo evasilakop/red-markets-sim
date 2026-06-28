@@ -10,7 +10,8 @@ interface SectorValues {
 
 interface SectorConfigGridProps {
     values: Record<SectorType, SectorValues>;
-    onChange: (type: SectorType, updates: Partial<SectorValues>) => void;
+    onChange?: (type: SectorType, updates: Partial<SectorValues>) => void;
+    readOnly?: boolean;
 }
 
 /**
@@ -27,7 +28,7 @@ function parseSectorValue(val: string | number): number | null {
  * Grid for configuring supply and demand for all city sectors.
  * Provides real-time equilibrium, chips, and competition preview.
  */
-export default function SectorConfigGrid({ values, onChange }: Readonly<SectorConfigGridProps>) {
+export default function SectorConfigGrid({ values, onChange, readOnly = false }: Readonly<SectorConfigGridProps>) {
     return (
         <Table striped highlightOnHover verticalSpacing={'sm'}>
             <thead>
@@ -52,28 +53,36 @@ export default function SectorConfigGrid({ values, onChange }: Readonly<SectorCo
                                 <Text fw={500} size={'sm'}>{type}</Text>
                             </td>
                             <td>
-                                <NumberInput
-                                    size={'xs'}
-                                    value={sector.supply}
-                                    onChange={(val) => {
-                                        const parsed = parseSectorValue(val);
-                                        if (parsed !== null) onChange(type, { supply: parsed });
-                                    }}
-                                    min={0}
-                                    max={100}
-                                />
+                                {readOnly ? (
+                                    <Text size={'sm'}>{sector.supply}</Text>
+                                ) : (
+                                    <NumberInput
+                                        size={'xs'}
+                                        value={sector.supply}
+                                        onChange={(val) => {
+                                            const parsed = parseSectorValue(val);
+                                            if (parsed !== null) onChange?.(type, { supply: parsed });
+                                        }}
+                                        min={0}
+                                        max={100}
+                                    />
+                                )}
                             </td>
                             <td>
-                                <NumberInput
-                                    size={'xs'}
-                                    value={sector.demand}
-                                    onChange={(val) => {
-                                        const parsed = parseSectorValue(val);
-                                        if (parsed !== null) onChange(type, { demand: parsed });
-                                    }}
-                                    min={0}
-                                    max={100}
-                                />
+                                {readOnly ? (
+                                    <Text size={'sm'}>{sector.demand}</Text>
+                                ) : (
+                                    <NumberInput
+                                        size={'xs'}
+                                        value={sector.demand}
+                                        onChange={(val) => {
+                                            const parsed = parseSectorValue(val);
+                                            if (parsed !== null) onChange?.(type, { demand: parsed });
+                                        }}
+                                        min={0}
+                                        max={100}
+                                    />
+                                )}
                             </td>
                             <Table.Td>
                                 <Text size={'sm'}>{equilibrium}</Text>

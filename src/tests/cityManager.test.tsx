@@ -91,10 +91,12 @@ describe('CityManager', () => {
             const input = await screen.findByPlaceholderText('City name');
             await user.type(input, 'New Test City');
 
-            const nextBtn = screen.getByRole('button', { name: /Next/i });
-            await user.click(nextBtn);
+            for (let step = 0; step < 2; step++) {
+                const nextBtns = screen.getAllByRole('button', { name: /^Next$/i });
+                await user.click(nextBtns[nextBtns.length - 1]);
+            }
 
-            const confirmBtn = screen.getByRole('button', { name: /Confirm & Create City/i });
+            const confirmBtn = await screen.findByRole('button', { name: /Confirm & Create City/i });
             await user.click(confirmBtn);
 
             expect(cityService.addCity).toHaveBeenCalledWith(

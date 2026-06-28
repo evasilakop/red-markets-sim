@@ -55,4 +55,11 @@ describe('SectorConfigGrid', () => {
         const badges = screen.getAllByText(/SCARCE|FLOODED|VOLATILE|SUBSIDIARY/);
         expect(badges[0].textContent).toBe('SCARCE');
     });
+
+    it('renders text instead of inputs when readOnly is true', () => {
+        renderWithProviders(<SectorConfigGrid values={mockValues} readOnly />);
+
+        expect(screen.queryAllByRole('textbox')).toHaveLength(0);
+        expect(screen.getAllByText('50').length).toBeGreaterThanOrEqual(2);
+    });
 });
