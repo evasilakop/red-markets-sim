@@ -155,27 +155,9 @@ export default function App() {
     return (
         <>
             {/* If no world selected, show the Lobby Grid */}
-            {!selectedWorld ? (
-                <>
-                    {/* CENTERED TOGGLE BUTTON */}
-                    <div style={{
-                        position: 'absolute',
-                        top: 20,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 100
-                    }}>
-                        <InstallAppButton />
-                        <Button onClick={() => setViewMode('APP')}>
-                            Try App Mode
-                        </Button>
-                    </div>
-                    
-                    <WorldLobby onWorldSelect={handleWorldSelect} />
-                </>
-            ) : (
+            {selectedWorld ? (
                 /* ... Dashboard View ... */
-                <div style={{ padding: 20 }}>
+                <div style={{padding: 20}}>
                     <Group mb={'md'} justify={'space-between'}> {/* Use justify to
                      separate them */}
                         <Button onClick={() => setSelectedWorld(null)}>
@@ -191,8 +173,26 @@ export default function App() {
                         selectedCity={selectedCity}
                         onCitySelect={setSelectedCity}
                     />
-                    <CityDashboard cityId={selectedCity?.id || null} />
+                    <CityDashboard cityId={selectedCity?.id || null}/>
                 </div>
+            ) : (
+                <>
+                    {/* CENTERED TOGGLE BUTTON */}
+                    <div style={{
+                        position: 'absolute',
+                        top: 20,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 100
+                    }}>
+                        <InstallAppButton/>
+                        <Button onClick={() => setViewMode('APP')}>
+                            Try App Mode
+                        </Button>
+                    </div>
+
+                    <WorldLobby onWorldSelect={handleWorldSelect}/>
+                </>
             )}
         </>
     );

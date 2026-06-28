@@ -8,7 +8,7 @@ interface ActionSelectorProps {
     disabled?: boolean;
 }
 
-export default function ActionSelector({ onApply, disabled = false }: ActionSelectorProps) {
+export default function ActionSelector({ onApply, disabled = false }: Readonly<ActionSelectorProps>) {
     // Note: Select value can be null, so we default to the first option
     const [selectedAction, setSelectedAction] = useState<string>('MARKET');
     const [magnitude, setMagnitude] = useState<number | string>(1);
