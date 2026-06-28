@@ -122,7 +122,7 @@ export function validateWorldBundle(bundle: any): string | null {
     }
 
     // Validate each sector
-    const cityIds = bundle.cities.map((c: City) => c.id);
+    const cityIds = new Set(bundle.cities.map((c: City) => c.id));
     for (const sector of bundle.sectors) {
         // Check required fields
         if (!sector.id || !sector.cityId || !sector.type ||
@@ -131,7 +131,7 @@ export function validateWorldBundle(bundle: any): string | null {
         }
 
         // Ensure sector belongs to a city in this world
-        if (!cityIds.includes(sector.cityId)) {
+        if (!cityIds.has(sector.cityId)) {
             return 'Sector data references non-existent city.';
         }
 

@@ -22,9 +22,9 @@ Object.defineProperty(globalThis, 'matchMedia', {
 // 2. Mock ResizeObserver (for Mantine layout)
 // Must be a class, not an arrow function
 globalThis.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
+    observe() { /* mock method */ }
+    unobserve() { /* mock method */ }
+    disconnect() { /* mock method */ }
 };
 
 // 3. Mock Web Worker (for useSimWorker)
@@ -39,7 +39,7 @@ globalThis.Worker = class Worker {
     postMessage(_msg: any) {
         // Echo back if needed, or just do nothing
     }
-    terminate() {}
-    addEventListener() {}
-    removeEventListener() {}
+    terminate() { /* mock method */ }
+    addEventListener() { /* mock method */ }
+    removeEventListener() { /* mock method */ }
 } as any;

@@ -57,6 +57,7 @@ export default function WorldLobby({ onWorldSelect }: Readonly<WorldLobbyProps>)
                     onWorldSelect(world);
                 } catch (e) {
                     showError("Failed to create world");
+                    console.error(e);
                 }
             }
         });
