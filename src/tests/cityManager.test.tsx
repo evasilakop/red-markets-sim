@@ -80,25 +80,28 @@ describe('CityManager', () => {
     });
 
     describe('Add City', () => {
-        it('opens modal and creates city', async () => {
+        it('opens wizard and creates city', async () => {
             const user = userEvent.setup();
-            const onCitySelect = vi.fn();
 
-            renderWithProviders(<CityManager {...defaultProps} onCitySelect={onCitySelect} />);
+            renderWithProviders(<CityManager {...defaultProps} />);
 
-            // 1. Click Add City
             const addBtn = await screen.findByRole('button', { name: /Add City/i });
             await user.click(addBtn);
 
-            // 2. Modal appears. Find Input.
             const input = await screen.findByPlaceholderText('City name');
             await user.type(input, 'New Test City');
 
-            // 3. Click Confirm (Create)
-            const createBtn = screen.getByRole('button', { name: /^Create$/i });
-            await user.click(createBtn);
+            const nextBtn = screen.getByRole('button', { name: /Next/i });
+            await user.click(nextBtn);
 
-            expect(cityService.addCity).toHaveBeenCalledWith('world-1', 'New Test City');
+            const confirmBtn = screen.getByRole('button', { name: /Confirm & Create City/i });
+            await user.click(confirmBtn);
+
+            expect(cityService.addCity).toHaveBeenCalledWith(
+                'world-1',
+                expect.objectContaining({ name: 'New Test City' }),
+                undefined
+            );
         });
     });
 

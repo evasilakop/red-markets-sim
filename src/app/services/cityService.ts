@@ -3,15 +3,23 @@ import {
     ALL_SECTORS,
     type City,
     type OperationResult,
-    type Sector
+    type Sector, type SectorType
 } from '../common/types.ts';
 import {chipsFor, competitionDiceFor, deriveEquilibrium} from './sim.ts';
+import {MAX_SUPPLY, MIN_SUPPLY} from '../common/constants.ts';
 
 import { generateId } from '../utils/idUtils.ts';
 
+/**
+ * Clamps a supply or demand value to the valid [0, 100] range.
+ */
+function clampSupplyDemand(value: number): number {
+    const safe = Number.isFinite(value) ? value : 50;
+    return Math.max(MIN_SUPPLY, Math.min(MAX_SUPPLY, safe));
+}
+
 // Generate UUID v4
 const uid = generateId;
-
 
 /**
  * Fetches a city and all its associated sectors.
@@ -23,24 +31,41 @@ export async function getCityData(cityId: string): Promise<{ city: City | undefi
     return { city, sectors };
 }
 
-export async function addCity(worldId: string, name: string): Promise<{ city: City; sectors: Sector[] }> {
+export async function addCity(
+    worldId: string, 
+    cityInfo: Partial<City>, 
+    customSectors?: Record<SectorType, { supply: number; demand: number }>
+): Promise<{ city: City; sectors: Sector[] }> {
     const city: City = {
         id: uid(),
         worldId,
-        name: name.trim() || 'Untitled City',
+        name: (cityInfo.name || 'Untitled City').trim(),
         lastTick: Date.now(),
-        notes: null,
-        population: 1000,
-        techLevel: 'Industrial',
-        defense: 10,
-        exports: [],
-        imports: []
+        notes: cityInfo.notes || null,
+        population: cityInfo.population ?? 1000,
+        techLevel: cityInfo.techLevel || 'Industrial',
+        defense: cityInfo.defense ?? 10,
+        exports: cityInfo.exports || [],
+        imports: cityInfo.imports || []
     };
 
-    // Initialize 10 sectors with random supply/demand around 50
+    // Initialize sectors
     const sectors: Sector[] = ALL_SECTORS.map((sectorType) => {
-        const supply = 50 + Math.floor(Math.random() * 11) - 5; // 45-55 range
-        const demand = 50 + Math.floor(Math.random() * 11) - 5; // 45-55 range
+        let supply: number;
+        let demand: number;
+
+        // If customSectors is provided, we MUST use the provided value for EVERY sector.
+        // If a specific sector is missing from customSectors, we fall back to random
+        // but logically, if the mode is 'custom', the UI should provide all.
+        if (customSectors && customSectors[sectorType]) {
+            supply = clampSupplyDemand(customSectors[sectorType].supply);
+            demand = clampSupplyDemand(customSectors[sectorType].demand);
+        } else {
+            // Default random values (45-55 range)
+            supply = 50 + Math.floor(Math.random() * 11) - 5;
+            demand = 50 + Math.floor(Math.random() * 11) - 5;
+        }
+
         const equilibrium = deriveEquilibrium(supply, demand);
 
         return {
@@ -103,10 +128,6 @@ export async function getCitySectors(cityId: string): Promise<Sector[]> {
     // Sort alphabetically by sector type
     sectors.sort((a, b) => a.type.localeCompare(b.type));
     return sectors;
-}
-
-export async function updateCityTick(cityId: string): Promise<void> {
-    await db.cities.update(cityId, { lastTick: Date.now() });
 }
 
 export async function updateSectorsInCity(cityId: string, updatedSectors: Sector[]): Promise<void> {

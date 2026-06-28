@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createTestDb } from './test-utils';
 import * as cityService from '../app/services/cityService';
 import { mockWorld, mockCities } from './fixtures';
-import type { City } from '../app/common/types';
+import {type City, type SectorType} from '../app/common/types';
 
 // Polyfill IndexedDB for JSDOM environment
 import 'fake-indexeddb/auto';
@@ -37,6 +37,91 @@ describe('cityService', () => {
     afterAll(async () => {
         if (testDb) await testDb.close();
         vi.restoreAllMocks();
+    });
+
+    describe('addCity', () => {
+        it('should create a city with random sectors when no custom sectors provided', async () => {
+            const cityInfo = { name: 'Random City', population: 2000 };
+            const { city, sectors } = await cityService.addCity(mockWorld.id, cityInfo);
+
+            expect(city.name).toBe('Random City');
+            expect(city.population).toBe(2000);
+            expect(sectors).toHaveLength(10);
+            
+            // Check that sectors are in the 45-55 range (default logic)
+            sectors.forEach(s => {
+                expect(s.supply).toBeGreaterThanOrEqual(45);
+                expect(s.supply).toBeLessThanOrEqual(55);
+                expect(s.demand).toBeGreaterThanOrEqual(45);
+                expect(s.demand).toBeLessThanOrEqual(55);
+                expect(s.equilibrium).toBeDefined();
+                expect(s.startingChips).toBeDefined();
+            });
+        });
+
+        it('should create a city with specific custom sectors', async () => {
+            const cityInfo = { name: 'Custom City' };
+            // Set a specific sector to a known state (e.g. SCARCE)
+            // Supply 10, Demand 90 -> SCARCE
+            const customSectors: Record<SectorType, { supply: number; demand: number }> = {
+                "FOOD & WATER": { supply: 10, demand: 90 },
+                DATA: { supply: 50, demand: 50 },
+                ENERGY: { supply: 50, demand: 50 },
+                HR: { supply: 50, demand: 50 },
+                MATERIAL: { supply: 50, demand: 50 },
+                MEDICINE: { supply: 50, demand: 50 },
+                PRODUCTS: { supply: 50, demand: 50 },
+                SHELTER: { supply: 50, demand: 50 },
+                SPECULATIVE: { supply: 50, demand: 50 },
+                TRANSPORTATION: { supply: 50, demand: 50 }
+            };
+
+            const { city, sectors } = await cityService.addCity(mockWorld.id, cityInfo, customSectors);
+
+            expect(city.name).toBe('Custom City');
+            expect(sectors).toHaveLength(10);
+            
+            const foodSector = sectors.find(s => s.type === 'FOOD & WATER');
+            expect(foodSector).toBeDefined();
+            expect(foodSector?.supply).toBe(10);
+            expect(foodSector?.demand).toBe(90);
+            expect(foodSector?.equilibrium).toBe('SCARCE');
+            expect(foodSector?.startingChips).toBeGreaterThan(0);
+
+            // Verify that other sectors also used the custom values (50/50) and not random ones
+            const otherSector = sectors.find(s => s.type !== 'FOOD & WATER');
+            expect(otherSector?.supply).toBe(50);
+            expect(otherSector?.demand).toBe(50);
+        });
+
+        it('should clamp custom sector values to 0-100 before saving', async () => {
+            const customSectors: Record<SectorType, { supply: number; demand: number }> = {
+                "FOOD & WATER": { supply: 150, demand: -10 },
+                DATA: { supply: 50, demand: 50 },
+                ENERGY: { supply: 50, demand: 50 },
+                HR: { supply: 50, demand: 50 },
+                MATERIAL: { supply: 50, demand: 50 },
+                MEDICINE: { supply: 50, demand: 50 },
+                PRODUCTS: { supply: 50, demand: 50 },
+                SHELTER: { supply: 50, demand: 50 },
+                SPECULATIVE: { supply: 50, demand: 50 },
+                TRANSPORTATION: { supply: 50, demand: 50 },
+            };
+
+            const { sectors } = await cityService.addCity(mockWorld.id, { name: 'Clamped City' }, customSectors);
+
+            const foodSector = sectors.find(s => s.type === 'FOOD & WATER');
+            expect(foodSector?.supply).toBe(100);
+            expect(foodSector?.demand).toBe(0);
+        });
+
+
+        it('should use defaults for missing cityInfo fields', async () => {
+            const { city } = await cityService.addCity(mockWorld.id, { name: 'Default City' });
+            expect(city.population).toBe(1000);
+            expect(city.techLevel).toBe('Industrial');
+            expect(city.defense).toBe(10);
+        });
     });
 
     describe('updateCity', () => {

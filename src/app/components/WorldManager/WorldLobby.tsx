@@ -21,7 +21,7 @@ interface WorldLobbyProps {
     onWorldSelect: (world: World) => void;
 }
 
-export default function WorldLobby({ onWorldSelect }: WorldLobbyProps) {
+export default function WorldLobby({ onWorldSelect }: Readonly<WorldLobbyProps>) {
     const [worlds, setWorlds] = useState<World[]>([]);
     const {showError, showSuccess} = useMessages();
 

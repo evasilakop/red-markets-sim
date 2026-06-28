@@ -25,7 +25,7 @@ interface WorldManagerProps {
     onWorldSelect: (world: World | null) => void;
 }
 
-export default function WorldTopBar({selectedWorld, onWorldSelect}: WorldManagerProps) {
+export default function WorldTopBar({selectedWorld, onWorldSelect}: Readonly<WorldManagerProps>) {
     const [worlds, setWorlds] = useState<World[]>([]);
     const {showSuccess, showError} = useMessages();
 
@@ -74,6 +74,7 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: WorldManager
                     await refreshWorlds();
                     onWorldSelect(world);
                 } catch (e) {
+                    console.error(e);
                     showError("Failed to create world");
                 }
             }
@@ -95,6 +96,7 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: WorldManager
                 showError(result.error || 'Import failed');
             }
         } catch (e) {
+            console.error(e);
             showError("Import failed");
         }
     };
