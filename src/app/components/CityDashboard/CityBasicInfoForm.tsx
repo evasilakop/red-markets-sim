@@ -1,7 +1,6 @@
 import { TextInput, NumberInput, Select, Textarea, Stack, TagsInput } from '@mantine/core';
 import { type City, type TechLevel } from '../../common/types';
-
-const techLevels: TechLevel[] = ['Stone', 'Iron', 'Industrial', 'Digital', 'Cutting Edge'];
+import { TECH_LEVELS } from '../../common/constants';
 
 interface CityBasicInfoFormProps {
     values: Partial<City>;
@@ -33,7 +32,7 @@ export default function CityBasicInfoForm({ values, onChange }: Readonly<CityBas
                 label={'Tech Level'}
                 value={values.techLevel}
                 onChange={(val) => val && onChange({ techLevel: val as TechLevel })}
-                data={techLevels.map(t => ({ value: t, label: t }))}
+                data={TECH_LEVELS.map(t => ({ value: t, label: t }))}
                 placeholder={'Select tech level'}
             />
             <NumberInput

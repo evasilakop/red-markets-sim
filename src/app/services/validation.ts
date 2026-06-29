@@ -1,4 +1,5 @@
 import type {City, Sector, World} from '../common/types.ts';
+import { TECH_LEVELS } from '../common/constants.ts';
 
 /**
  * Structure of a world bundle file used for import/export operations.
@@ -114,6 +115,21 @@ export function validateWorldBundle(bundle: any): string | null {
     for (const city of bundle.cities) {
         if (!city.id || !city.worldId || !city.name || typeof city.lastTick !== 'number') {
             return 'Invalid city data structure.';
+        }
+        if (typeof city.population !== 'number') {
+            return 'Missing or invalid city field: population.';
+        }
+        if (!TECH_LEVELS.includes(city.techLevel)) {
+            return 'Missing or invalid city field: techLevel.';
+        }
+        if (typeof city.defense !== 'number') {
+            return 'Missing or invalid city field: defense.';
+        }
+        if (!Array.isArray(city.exports)) {
+            return 'Missing or invalid city field: exports.';
+        }
+        if (!Array.isArray(city.imports)) {
+            return 'Missing or invalid city field: imports.';
         }
         // Ensure city belongs to this world
         if (city.worldId !== world.id) {

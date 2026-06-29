@@ -1,6 +1,7 @@
 import {
     type ActionType,
-    type SectorType
+    type SectorType,
+    type TechLevel
 } from './types';
 
 /*
@@ -40,3 +41,5 @@ export const MAX_SUPPLY = 100;
 
 export const MIN_MAGNITUDE = 0;
 export const MAX_MAGNITUDE = 10;
+
+export const TECH_LEVELS: TechLevel[] = ['Stone', 'Iron', 'Industrial', 'Digital', 'Cutting Edge'];
