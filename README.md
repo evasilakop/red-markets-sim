@@ -1,14 +1,17 @@
-# MVP scope and rules coverage
+# Scope
 
 ### Overview
-- Goal: A client-only React app that simulates Red Markets city economies locally per user. Users can create “worlds,” add cities, view per-sector supply/demand, apply actions, advance time, and import/export their world as JSON. No login or server.
+A client-only React app that emulates Red Markets city economies locally per user. Users can create "worlds," add cities, view per-sector supply/demand, apply actions, advance time, and import/export their world as JSON. No login or server.
 
-## MVP Scope (Phase 1)
+## Scope
 - Worlds
   - Create/select/delete local worlds (IndexedDB storage).
   - Import/export a world as a single JSON file.
 - Cities
-  - Add/delete cities within a world.
+  - Add cities via a multistep wizard: configure name, population, tech level, defense, notes, exports, and imports.
+  - Choose between random sector economy or custom supply/demand per sector, with re-roll capability.
+  - Edit existing city properties (name, population, tech level, defense, notes, exports, imports).
+  - Delete cities with confirmation.
   - Each city has 10 sectors: Food/Water, Shelter, Material, Products, Energy, Medicine, Speculative, Transportation, Data, HR.
 - Sectors (per city)
   - Display supply (0–100), demand (0–100), equilibrium state, starting CHIPS, competition undercut dice, and a display-only price index.
@@ -16,13 +19,22 @@
 - Simulation
   - Apply actions and advance time (tick) to update sector state.
   - Ambient noise each update to simulate minor fluctuations.
+  - Action coefficients loaded from an external config file (`public/config/simulation_weights.txt`) — GMs can tune the impact of each action type without touching source code.
+- GM Tuning
+  - Action coefficients externalized to a plain text file (`public/config/simulation_weights.txt`).
+  - GMs adjust values per action type; reload the app to apply.
+  - Falls back to default values if the file is missing or malformed.
+  - See [User Guide](docs/User%20guide.md) for tuning strategies.
+- PWA (Progressive Web App)
+  - The app is installable on desktop/mobile and works offline.
+  - Supported on modern Chrome, Edge, and Firefox.
 - UX
   - Sector table with supply/demand bars and key stats.
   - Action selector + magnitude input.
   - Tick button (advance time).
   - Basic confirmations for destructive actions.
 
-## Implemented Rules (Phase 1)
+## Implemented Rules
 - Equilibrium states (derived from supply/demand):
   - Flooded, Volatile, Subsidiary, Scarce.
 - Derivations from equilibrium:
@@ -31,19 +43,25 @@
 - Action effects (simplified):
   - Supply modifiers: Increase Supply/Subcontract (+), Reduce Supply/Restrict Flow/Sabotage (-).
   - Demand modifiers: Market/Increase Demand/Price Low/Speculate (+), Decrease Demand (-).
+- Configurable coefficients:
+  - Action multipliers are loaded from `public/config/simulation_weights.txt` at startup.
+  - GMs can tune the intensity of each action type independently.
+  - Falls back to built-in defaults if the config file is missing.
 - Ambient noise and tie-breakers:
   - Small random drift per update.
   - Tie-breaker to avoid jitter when supply/demand are “mid-range.”
 
-## Out of Scope (Phase 2)
+## Not Yet Implemented
 - Equilibrium-gated actions (restricting which actions are valid per state).
 - Macro events (e.g., crises, subsidies, logistics shocks) and inter-city effects.
 - Deterministic RNG seed per world/city (reproducible ticks).
-- Background scheduled ticks (global “tick all” cadence).
+- Background scheduled ticks (global "tick all" cadence).
 - Map view or geographic visualization.
-- PWA offline caching (service worker).
 - Authentication or cloud sync.
 - Detailed pricing/negotiation mechanics beyond CHIPS/competition display.
+- Jobs system and enclave consumption/crisis checks.
+- Snapshot timeline (per-world undo/rollback).
+- Real-world seeding via OSM/World Bank APIs.
 
 ## Assumptions and Constraints
 - Single-user, local-first app: data stored in IndexedDB per browser/profile.
@@ -70,10 +88,10 @@
     - Fields: id (PK), name, createdAt, notes
     - Indexes: id (primary)
 - Cities
-    - Fields: id (PK), worldId (FK), name, lat?, lon?, boundary?, lastTick, metadata?
+    - Fields: id (PK), worldId (FK), name, population, techLevel (enum), defense, exports, imports, notes?, lastTick
     - Indexes: id (primary), worldId (to query by world), name (optional for sorting)
 - Sectors
-    - Fields: id (PK), cityId (FK), type (enum), supply (0–100), demand (0–100), equilibrium (enum), startingChips, competitionUndercutDice, priceIndex, priceIndexSource ('user' | 'inferred'), updatedAt
+    - Fields: id (PK), cityId (FK), type (enum), supply (0–100), demand (0–100), equilibrium (enum), startingChips, competitionUndercutDice, priceIndex?, updatedAt
     - Indexes: id (primary), cityId (to query by city), unique composite [cityId, type] (one sector of each type per city)
 
 ### Optional (future) tables
@@ -145,9 +163,9 @@
     - version: integer (starts at 1)
     - world: { id, name, createdAt, notes? }
     - cities: array of city objects
-        - City fields: { id, worldId, name, lat?, lon?, boundary?, lastTick, metadata? }
+        - City fields: { id, worldId, name, population, techLevel, defense, exports, imports, notes?, lastTick }
     - sectors: array of sector objects
-        - Sector fields: { id, cityId, type, supply, demand, equilibrium, startingChips, competitionUndercutDice, priceIndex?, priceIndexSource?, updatedAt }
+        - Sector fields: { id, cityId, type, supply, demand, equilibrium, startingChips, competitionUndercutDice, priceIndex?, updatedAt }
 - Notes:
     - IDs are preserved to maintain relationships (worldId/cityId).
     - Sector uniqueness: one per [cityId, type].
@@ -159,7 +177,7 @@
 "version": 1,
 "world": { "id": "uuid", "name": "My World", "createdAt": 1720000000000 },
 "cities": [
-{ "id": "uuid", "worldId": "uuid", "name": "Kansas City", "lastTick": 1720000000000 }
+{ "id": "uuid", "worldId": "uuid", "name": "Kansas City", "population": 1000, "techLevel": "Industrial", "defense": 10, "exports": [], "imports": [], "lastTick": 1720000000000 }
 ],
 "sectors": [
 { "id": "uuid", "cityId": "uuid", "type": "FOOD & WATER", "supply": 52, "demand": 47, "equilibrium": "SUBSIDIARY", "startingChips": 3, "competitionUndercutDice": -3, "updatedAt": 1720000000000 }
