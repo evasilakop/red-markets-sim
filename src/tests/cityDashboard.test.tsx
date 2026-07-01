@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import CityDashboard from '../app/components/CityDashboard/CityDashboard';
 import type { CityData } from '../app/hooks/useCityData';
 import { MantineProvider } from '@mantine/core';
@@ -91,6 +92,55 @@ describe('CityDashboard', () => {
         // Wait for the async action to be called
         await waitFor(() => {
             expect(mockTick).toHaveBeenCalled();
+        });
+    });
+
+    it('renders help tooltip icons for sector names', () => {
+        const mockData: CityData = {
+            city: { id: 'c1', worldId: 'w1', name: 'Test City', lastTick: Date.now(), techLevel: 'Iron', defense: 500, population: 1000, imports: [], exports: [] },
+            sectors: [
+                {
+                    id: 's1', cityId: 'c1', type: 'FOOD & WATER',
+                    supply: 50, demand: 50, equilibrium: 'VOLATILE',
+                    startingChips: 2, competitionUndercutDice: 0, updatedAt: 0
+                }
+            ]
+        };
+        mockUseCityData.mockReturnValue(mockData);
+
+        renderWithMantine(<CityDashboard cityId="c1" />);
+
+        // There should be help buttons (one per sector row + one for Tick button)
+        const helpButtons = screen.getAllByRole('button', { name: /help/i });
+        expect(helpButtons.length).toBeGreaterThan(0);
+    });
+
+    it('displays sector definition tooltip on hover', async () => {
+        const mockData: CityData = {
+            city: { id: 'c1', worldId: 'w1', name: 'Test City', lastTick: Date.now(), techLevel: 'Iron', defense: 500, population: 1000, imports: [], exports: [] },
+            sectors: [
+                {
+                    id: 's1', cityId: 'c1', type: 'FOOD & WATER',
+                    supply: 50, demand: 50, equilibrium: 'VOLATILE',
+                    startingChips: 2, competitionUndercutDice: 0, updatedAt: 0
+                }
+            ]
+        };
+        mockUseCityData.mockReturnValue(mockData);
+
+        renderWithMantine(<CityDashboard cityId="c1" />);
+
+        const user = userEvent.setup();
+        // Find the help button inside the sector row for FOOD & WATER
+        const sectorCell = screen.getByText('FOOD & WATER');
+        const sectorRow = sectorCell.closest('tr')!;
+        const helpButton = sectorRow.querySelector('button[aria-label="Help"]') as HTMLElement;
+
+        await user.hover(helpButton);
+
+        // Wait for tooltip content to appear — should contain sector definition text
+        await waitFor(() => {
+            expect(screen.getByText(/MREs, canned goods/i)).toBeInTheDocument();
         });
     });
 });

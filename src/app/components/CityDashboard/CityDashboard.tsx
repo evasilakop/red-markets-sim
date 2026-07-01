@@ -6,7 +6,7 @@ import {updateSectorsInCity} from '../../services/cityService';
 import {type ActionType, type SectorType, type UserAction} from '../../common/types';
 import SectorRow from './SectorRow';
 import EditCityModal from './EditCityModal';
-import {Button, Group, Paper, Table, Text, Title, Slider, Badge, Stack} from '@mantine/core';
+import {Button, Group, Paper, Table, Text, Title, Slider, Badge, Stack, Tooltip} from '@mantine/core';
 import {IconSettings, IconUsers, IconShield, IconMicroscope, IconPencil} from '@tabler/icons-react';
 
 interface CityDashboardProps {
@@ -162,12 +162,20 @@ export default function CityDashboard({cityId}: Readonly<CityDashboardProps>) {
                     <Text size={'sm'} c={'dimmed'}>
                         Last Update: {new Date(city.lastTick).toLocaleTimeString()}
                     </Text>
-                    <Button
-                        onClick={handleTick}
-                        loading={busy} // Disable while worker is thinking
+                    <Tooltip
+                        label={'Advance time for all sectors. Supply and Demand drift slightly across all sectors, reflecting the natural evolution of the market. Apply this after player actions to progress the economy.'}
+                        multiline={true}
+                        w={260}
+                        withArrow={true}
+                        openDelay={1000}
                     >
-                        Advance Time (Tick)
-                    </Button>
+                        <Button
+                            onClick={handleTick}
+                            loading={busy} // Disable while worker is thinking
+                        >
+                            Advance Time (Tick)
+                        </Button>
+                    </Tooltip>
                 </Group>
             </Group>
 

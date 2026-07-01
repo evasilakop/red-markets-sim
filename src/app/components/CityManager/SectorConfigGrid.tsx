@@ -1,6 +1,8 @@
 import { Table, NumberInput, Text, Group, Stack } from '@mantine/core';
 import { ALL_SECTORS, type SectorType } from '../../common/types';
+import { EQUILIBRIUM_DEFINITIONS, SECTOR_DEFINITIONS, STAT_DEFINITIONS } from '../../common/tooltips';
 import { deriveEquilibrium, chipsFor, competitionDiceFor } from '../../services/sim';
+import HelpTooltip from '../common/HelpTooltip';
 import { MAX_SUPPLY, MIN_SUPPLY } from '../../common/constants';
 
 interface SectorValues {
@@ -50,7 +52,10 @@ export default function SectorConfigGrid({ values, onChange, readOnly = false }:
                     return (
                         <tr key={type}>
                             <td>
-                                <Text fw={500} size={'sm'}>{type}</Text>
+                                <Group gap={'xs'} wrap={'nowrap'}>
+                                    <Text fw={500} size={'sm'}>{type}</Text>
+                                    <HelpTooltip label={SECTOR_DEFINITIONS[type]} />
+                                </Group>
                             </td>
                             <td>
                                 {readOnly ? (
@@ -85,16 +90,21 @@ export default function SectorConfigGrid({ values, onChange, readOnly = false }:
                                 )}
                             </td>
                             <Table.Td>
-                                <Text size={'sm'}>{equilibrium}</Text>
+                                <Group gap={'xs'} wrap={'nowrap'}>
+                                    <Text size={'sm'}>{equilibrium}</Text>
+                                    <HelpTooltip label={EQUILIBRIUM_DEFINITIONS[equilibrium]} />
+                                </Group>
                             </Table.Td>
                             <Table.Td>
                                 <Stack gap={2}>
-                                    <Group gap={8} wrap={'nowrap'} title={'Starting Chips'}>
+                                    <Group gap={8} wrap={'nowrap'}>
                                         <Text size={'xs'} c={'dimmed'} fw={700} w={45}>CHIPS</Text>
+                                        <HelpTooltip label={STAT_DEFINITIONS['CHIPS']} />
                                         <Text size={'sm'} w={20} ta={'center'}>{chips}</Text>
                                     </Group>
-                                    <Group gap={8} wrap={'nowrap'} title={'Competition Dice'}>
+                                    <Group gap={8} wrap={'nowrap'}>
                                         <Text size={'xs'} c={'dimmed'} fw={700} w={45}>COMP</Text>
+                                        <HelpTooltip label={STAT_DEFINITIONS['COMP']} />
                                         <Text size={'sm'} w={20} ta={'center'}>{competition}</Text>
                                     </Group>
                                 </Stack>
