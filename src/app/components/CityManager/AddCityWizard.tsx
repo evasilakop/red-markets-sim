@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Modal, Stepper, Button, Group, Stack, Text, Divider, Table, Title, Badge } from '@mantine/core';
 import { type City, ALL_SECTORS } from '../../common/types';
+import { EQUILIBRIUM_DEFINITIONS, SECTOR_DEFINITIONS, STAT_DEFINITIONS } from '../../common/tooltips';
 import { addCity, generateRandomSectors } from '../../services/cityService';
 import CityBasicInfoForm from '../CityDashboard/CityBasicInfoForm';
+import HelpTooltip from '../common/HelpTooltip';
 import SectorConfigGrid from './SectorConfigGrid';
 import { chipsFor, competitionDiceFor, deriveEquilibrium } from '../../services/sim';
 import { useMessages } from '../../hooks/useMessages';
@@ -196,22 +198,30 @@ export default function AddCityWizard({ opened, onClose, onCreated, worldId }: R
                                     return (
                                         <tr key={type}>
                                             <Table.Td>
-                                                <Text size={'sm'}>{type}</Text>
+                                                <Group gap={'xs'} wrap={'nowrap'}>
+                                                    <Text size={'sm'}>{type}</Text>
+                                                    <HelpTooltip label={SECTOR_DEFINITIONS[type]} />
+                                                </Group>
                                             </Table.Td>
                                             <Table.Td>
                                                 <Text size={'sm'}>{s.supply}/{s.demand}</Text>
                                             </Table.Td>
                                             <Table.Td>
-                                                <Text size={'sm'}>{eq}</Text>
+                                                <Group gap={'xs'} wrap={'nowrap'}>
+                                                    <Text size={'sm'}>{eq}</Text>
+                                                    <HelpTooltip label={EQUILIBRIUM_DEFINITIONS[eq]} />
+                                                </Group>
                                             </Table.Td>
                                             <Table.Td>
                                                 <Stack gap={2}>
-                                                    <Group gap={8} wrap={'nowrap'} title={'Starting Chips'}>
+                                                    <Group gap={8} wrap={'nowrap'}>
                                                         <Text size={'xs'} c={'dimmed'} fw={700} w={45}>CHIPS</Text>
+                                                        <HelpTooltip label={STAT_DEFINITIONS['CHIPS']} />
                                                         <Text size={'sm'} w={20} ta={'center'}>{chipsFor(eq)}</Text>
                                                     </Group>
-                                                    <Group gap={8} wrap={'nowrap'} title={'Competition Dice'}>
+                                                    <Group gap={8} wrap={'nowrap'}>
                                                         <Text size={'xs'} c={'dimmed'} fw={700} w={45}>COMP</Text>
+                                                        <HelpTooltip label={STAT_DEFINITIONS['COMP']} />
                                                         <Text size={'sm'} w={20} ta={'center'}>{competitionDiceFor(eq)}</Text>
                                                     </Group>
                                                 </Stack>

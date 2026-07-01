@@ -1,6 +1,8 @@
 import React, {useState} from 'react';
 import {type ActionType} from '../../common/types';
+import {ACTION_DEFINITIONS} from '../../common/tooltips';
 import {ACTION_OPTIONS} from '../../common/constants';
+import HelpTooltip from '../common/HelpTooltip';
 import {Button, Group, NumberInput, Select} from '@mantine/core';
 
 interface ActionSelectorProps {
@@ -35,6 +37,9 @@ export default function ActionSelector({ onApply, disabled = false }: Readonly<A
                     size={'sm'}
                     aria-label={'Select Action'}
                 />
+
+                {/* Tooltip for the selected action */}
+                <HelpTooltip label={ACTION_DEFINITIONS[selectedAction as ActionType]} />
 
                 {/* 2. The Magnitude Input */}
                 <NumberInput

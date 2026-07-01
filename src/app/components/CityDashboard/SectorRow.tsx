@@ -1,5 +1,7 @@
 import {type ActionType, type Sector} from '../../common/types';
+import {EQUILIBRIUM_DEFINITIONS, SECTOR_DEFINITIONS, STAT_DEFINITIONS} from '../../common/tooltips';
 import {formatPriceIndex, getEquilibriumDisplay} from '../../utils/displayUtils';
+import HelpTooltip from '../common/HelpTooltip';
 import ActionSelector from './ActionSelector';
 import {Badge, Group, Progress, Stack, Table, Text} from '@mantine/core';
 
@@ -39,7 +41,10 @@ export default function SectorRow({ sector, onAction, isBusy = false }: Readonly
     return (
         <Table.Tr>
             <Table.Td fw={700} width={150} >
-                {sector.type}
+                <Group gap={'xs'} wrap={'nowrap'}>
+                    <Text size={'sm'}>{sector.type}</Text>
+                    <HelpTooltip label={SECTOR_DEFINITIONS[sector.type]} />
+                </Group>
             </Table.Td>
 
             <Table.Td ta={'center'}>
@@ -51,20 +56,25 @@ export default function SectorRow({ sector, onAction, isBusy = false }: Readonly
             </Table.Td>
 
             <Table.Td ta={'center'}>
-                <Badge color={color} variant={'outline'} size={'lg'}>
-                    {label}
-                </Badge>
+                <Group gap={'xs'} wrap={'nowrap'} justify={'center'}>
+                    <Badge color={color} variant={'outline'} size={'lg'}>
+                        {label}
+                    </Badge>
+                    <HelpTooltip label={EQUILIBRIUM_DEFINITIONS[sector.equilibrium]} />
+                </Group>
             </Table.Td>
 
             <Table.Td>
                 <Stack gap={2}>
-                    <Group gap={8} wrap={'nowrap'} title={'Starting Chips'}>
+                    <Group gap={8} wrap={'nowrap'}>
                         {/* Fixed width label (e.g., 45px) ensures alignment */}
                         <Text size={'xs'} c={'dimmed'} fw={700} w={45}>CHIPS</Text>
+                        <HelpTooltip label={STAT_DEFINITIONS['CHIPS']} />
                         <Text size={'sm'} w={20} ta={'center'}>{sector.startingChips}</Text>
                     </Group>
-                    <Group gap={8} wrap={'nowrap'} title={'Competition Dice'}>
+                    <Group gap={8} wrap={'nowrap'}>
                         <Text size={'xs'} c={'dimmed'} fw={700} w={45}>COMP</Text>
+                        <HelpTooltip label={STAT_DEFINITIONS['COMP']} />
                         <Text size={'sm'} w={20} ta={'center'}>{sector.competitionUndercutDice}</Text>
                     </Group>
                 </Stack>
