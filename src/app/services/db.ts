@@ -25,4 +25,4 @@ export class RMDB extends Dexie {
 
 // Export single instance to use throughout the app
 export const db = new RMDB();
-(globalThis as any).db = db;
+(globalThis as { db?: RMDB }).db = db;

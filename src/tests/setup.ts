@@ -31,15 +31,15 @@ globalThis.ResizeObserver = class ResizeObserver {
 // Must be a class
 globalThis.Worker = class Worker {
     url: string;
-    onmessage: (msg: any) => void;
+    onmessage: (msg: unknown) => void;
     constructor(stringUrl: string) {
         this.url = stringUrl;
         this.onmessage = () => {};
     }
-    postMessage(_msg: any) {
+    postMessage(_msg: unknown) {
         // Echo back if needed, or just do nothing
     }
     terminate() { /* mock method */ }
     addEventListener() { /* mock method */ }
     removeEventListener() { /* mock method */ }
-} as any;
+} as unknown as typeof Worker;

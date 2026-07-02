@@ -11,7 +11,7 @@ import 'fake-indexeddb/auto';
 export function createTestDb(): RMDB {
     // Using a unique name for each in-memory instance to avoid collisions
     const testDb = new RMDB();
-    // @ts-ignore - accessing internal Dexie property for in-memory mode
+    // @ts-expect-error — accessing internal Dexie property for in-memory mode
     testDb.name = `test_db_${Math.random().toString(36).substring(7)}`;
     return testDb;
 }
@@ -26,7 +26,7 @@ interface RenderOptions {
  * @param ui The React component to render.
  * @param options Configuration options (e.g., passing a specific test database).
  */
-export function renderWithProviders(ui: React.ReactNode, { db, ...otherOptions }: RenderOptions = {}) {
+export function renderWithProviders(ui: React.ReactNode, { db: _db, ...otherOptions }: RenderOptions = {}) {
     return render(
         <MantineProvider theme={{
             components: {

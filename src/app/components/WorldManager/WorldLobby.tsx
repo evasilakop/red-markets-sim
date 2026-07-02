@@ -32,6 +32,7 @@ export default function WorldLobby({ onWorldSelect }: Readonly<WorldLobbyProps>)
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch on mount
         refreshWorlds();
     }, [refreshWorlds]);
 

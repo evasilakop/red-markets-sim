@@ -43,10 +43,11 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: Readonly<Wor
         } catch (error) {
             console.error("Failed to list worlds", error);
         }
-    }, []);
+    }, [onWorldSelect, selectedWorld]);
 
     useEffect(() => {
         let active = true;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch on mount
         refreshWorlds(active);
         return () => { active = false; };
     }, [refreshWorlds]);

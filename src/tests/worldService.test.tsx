@@ -2,12 +2,13 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createTestDb } from './test-utils';
 import * as worldService from '../app/services/worldService';
 import * as cityService from '../app/services/cityService';
+import { RMDB } from '../app/services/db';
 
 import 'fake-indexeddb/auto';
 
 const { mockDbContainer } = vi.hoisted(() => ({
     mockDbContainer: {
-        db: null as any
+        db: null as RMDB | null
     }
 }));
 
@@ -34,7 +35,7 @@ function createFileFromJson(data: unknown): File {
 }
 
 describe('worldService - import/export', () => {
-    let testDb: any;
+    let testDb: RMDB;
     let testWorldId: string;
 
     beforeAll(async () => {
@@ -99,11 +100,11 @@ describe('worldService - import/export', () => {
         // Verify data was written to DB
         const city = await testDb.cities.get('imported-city-1');
         expect(city).toBeDefined();
-        expect(city.population).toBe(2500);
-        expect(city.techLevel).toBe('Cutting Edge');
-        expect(city.defense).toBe(80);
-        expect(city.exports).toEqual(['High Tech', 'Data']);
-        expect(city.imports).toEqual(['Food', 'Fuel']);
+        expect(city!.population).toBe(2500);
+        expect(city!.techLevel).toBe('Cutting Edge');
+        expect(city!.defense).toBe(80);
+        expect(city!.exports).toEqual(['High Tech', 'Data']);
+        expect(city!.imports).toEqual(['Food', 'Fuel']);
     });
 
     it('should reject a bundle with missing population field', async () => {

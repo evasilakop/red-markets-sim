@@ -3,6 +3,7 @@ import { createTestDb } from './test-utils';
 import * as cityService from '../app/services/cityService';
 import { mockWorld, mockCities } from './fixtures';
 import {type City, type SectorType} from '../app/common/types';
+import { RMDB } from '../app/services/db';
 
 // Polyfill IndexedDB for JSDOM environment
 import 'fake-indexeddb/auto';
@@ -10,7 +11,7 @@ import 'fake-indexeddb/auto';
 // Mock the db module
 const { mockDbContainer } = vi.hoisted(() => ({
     mockDbContainer: {
-        db: null as any
+        db: null as RMDB | null
     }
 }));
 
@@ -25,7 +26,7 @@ vi.mock('../app/services/db', async (importOriginal) => {
 });
 
 describe('cityService', () => {
-    let testDb: any;
+    let testDb: RMDB;
 
     beforeAll(async () => {
         testDb = createTestDb();
@@ -144,7 +145,7 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', { name: updatedName });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.name).toBe(updatedName);
+            expect(result!.name).toBe(updatedName);
         });
 
         it('should update city population', async () => {
@@ -152,7 +153,7 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', { population: updatedPopulation });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.population).toBe(updatedPopulation);
+            expect(result!.population).toBe(updatedPopulation);
         });
 
         it('should update city techLevel', async () => {
@@ -160,7 +161,7 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', { techLevel: updatedTechLevel });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.techLevel).toBe(updatedTechLevel);
+            expect(result!.techLevel).toBe(updatedTechLevel);
         });
 
         it('should update city defense', async () => {
@@ -168,7 +169,7 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', { defense: updatedDefense });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.defense).toBe(updatedDefense);
+            expect(result!.defense).toBe(updatedDefense);
         });
 
         it('should update city notes', async () => {
@@ -176,7 +177,7 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', { notes: updatedNotes });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.notes).toBe(updatedNotes);
+            expect(result!.notes).toBe(updatedNotes);
         });
 
         it('should update city exports', async () => {
@@ -184,7 +185,7 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', { exports: updatedExports });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.exports).toEqual(updatedExports);
+            expect(result!.exports).toEqual(updatedExports);
         });
 
         it('should update city imports', async () => {
@@ -192,7 +193,7 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', { imports: updatedImports });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.imports).toEqual(updatedImports);
+            expect(result!.imports).toEqual(updatedImports);
         });
 
         it('should update multiple fields at once', async () => {
@@ -209,13 +210,13 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', updates);
 
             const result = await testDb.cities.get('city-1');
-            expect(result.name).toBe('Mega City');
-            expect(result.population).toBe(10000);
-            expect(result.techLevel).toBe('Cutting Edge');
-            expect(result.defense).toBe(90);
-            expect(result.notes).toBe('The best city');
-            expect(result.exports).toEqual(['Everything']);
-            expect(result.imports).toEqual(['Nothing']);
+            expect(result!.name).toBe('Mega City');
+            expect(result!.population).toBe(10000);
+            expect(result!.techLevel).toBe('Cutting Edge');
+            expect(result!.defense).toBe(90);
+            expect(result!.notes).toBe('The best city');
+            expect(result!.exports).toEqual(['Everything']);
+            expect(result!.imports).toEqual(['Nothing']);
         });
 
         it('should handle partial updates without affecting other fields', async () => {
@@ -235,25 +236,25 @@ describe('cityService', () => {
             await cityService.updateCity('city-1', { name: 'Partial Update' });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.name).toBe('Partial Update');
-            expect(result.population).toBe(1000); // Should remain unchanged
-            expect(result.techLevel).toBe('Industrial'); // Should remain unchanged
-            expect(result.defense).toBe(50); // Should remain unchanged
+            expect(result!.name).toBe('Partial Update');
+            expect(result!.population).toBe(1000); // Should remain unchanged
+            expect(result!.techLevel).toBe('Industrial'); // Should remain unchanged
+            expect(result!.defense).toBe(50); // Should remain unchanged
         });
 
         it('should handle null notes', async () => {
             await cityService.updateCity('city-1', { notes: null });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.notes).toBeNull();
+            expect(result!.notes).toBeNull();
         });
 
         it('should handle empty arrays for exports and imports', async () => {
             await cityService.updateCity('city-1', { exports: [], imports: [] });
 
             const result = await testDb.cities.get('city-1');
-            expect(result.exports).toEqual([]);
-            expect(result.imports).toEqual([]);
+            expect(result!.exports).toEqual([]);
+            expect(result!.imports).toEqual([]);
         });
     });
 });

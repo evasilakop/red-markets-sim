@@ -45,7 +45,7 @@ export function parseSimulationWeights(content: string): ActionCoefficients {
             if (!Number.isNaN(numValue)) {
                 // Use type assertion as we know the keys in the file 
                 // should match the ActionType names
-                (coefficients as any)[key] = numValue;
+                (coefficients as Record<string, number>)[key] = numValue;
             }
         }
     }

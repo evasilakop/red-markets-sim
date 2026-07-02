@@ -1,4 +1,4 @@
-import type {City, Sector, World} from '../common/types.ts';
+import type {City, Sector, World, TechLevel} from '../common/types.ts';
 import { TECH_LEVELS } from '../common/constants.ts';
 
 /**
@@ -80,46 +80,49 @@ export const formatFileSize = (bytes: number): string => {
  * @returns Error message string if validation fails, null if valid
  *
  */
-export function validateWorldBundle(bundle: any): string | null {
+export function validateWorldBundle(bundle: unknown): string | null {
     // Check basic structure
     if (!bundle || typeof bundle !== 'object') {
         return 'Invalid file format.';
     }
 
+    const b = bundle as Record<string, unknown>;
+
     // Validate version field
-    if (typeof bundle.version !== 'number') {
+    if (typeof b.version !== 'number') {
         return 'Missing or invalid version field.';
     }
 
     // Validate world object exists
-    if (!bundle.world || typeof bundle.world !== 'object') {
+    if (!b.world || typeof b.world !== 'object') {
         return 'Missing or invalid world data.';
     }
 
     // Validate arrays exist
-    if (!Array.isArray(bundle.cities)) {
+    if (!Array.isArray(b.cities)) {
         return 'Missing or invalid cities data.';
     }
 
-    if (!Array.isArray(bundle.sectors)) {
+    if (!Array.isArray(b.sectors)) {
         return 'Missing or invalid sectors data.';
     }
 
     // Validate world object structure
-    const world = bundle.world;
+    const world = b.world as Record<string, unknown>;
     if (!world.id || !world.name || typeof world.createdAt !== 'number') {
         return 'Invalid world data structure.';
     }
 
     // Validate each city
-    for (const city of bundle.cities) {
+    for (const city of b.cities as Array<Record<string, unknown>>) {
+
         if (!city.id || !city.worldId || !city.name || typeof city.lastTick !== 'number') {
             return 'Invalid city data structure.';
         }
         if (typeof city.population !== 'number') {
             return 'Missing or invalid city field: population.';
         }
-        if (!TECH_LEVELS.includes(city.techLevel)) {
+        if (!TECH_LEVELS.includes(city.techLevel as TechLevel)) {
             return 'Missing or invalid city field: techLevel.';
         }
         if (typeof city.defense !== 'number') {
@@ -138,8 +141,8 @@ export function validateWorldBundle(bundle: any): string | null {
     }
 
     // Validate each sector
-    const cityIds = new Set(bundle.cities.map((c: City) => c.id));
-    for (const sector of bundle.sectors) {
+    const cityIds = new Set(b.cities.map((c: { id: string }) => c.id));
+    for (const sector of b.sectors as Array<Record<string, unknown>>) {
         // Check required fields
         if (!sector.id || !sector.cityId || !sector.type ||
             typeof sector.supply !== 'number' || typeof sector.demand !== 'number') {
@@ -147,7 +150,7 @@ export function validateWorldBundle(bundle: any): string | null {
         }
 
         // Ensure sector belongs to a city in this world
-        if (!cityIds.has(sector.cityId)) {
+        if (!cityIds.has(sector.cityId as string)) {
             return 'Sector data references non-existent city.';
         }
 

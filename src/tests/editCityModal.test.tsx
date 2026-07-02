@@ -6,6 +6,7 @@ import * as cityService from '../app/services/cityService';
 import { renderWithProviders, createTestDb } from './test-utils';
 import * as dbModule from '../app/services/db';
 import type { City } from '../app/common/types';
+import { type RMDB } from '../app/services/db';
 
 // --- MOCKS ---
 vi.mock('@mantine/notifications', () => ({
@@ -39,7 +40,7 @@ const defaultProps = {
 // --- TESTS ---
 
 describe('EditCityModal', () => {
-    let testDb: any;
+    let testDb: RMDB;
 
     beforeEach(async () => {
         testDb = createTestDb();

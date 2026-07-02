@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders, createTestDb } from './test-utils';
 import { mockWorld, mockCities } from './fixtures';
 import { useCityData } from '../app/hooks/useCityData';
+import { RMDB } from '../app/services/db';
 
 // Polyfill IndexedDB for JSDOM environment
 import 'fake-indexeddb/auto';
@@ -11,7 +12,7 @@ import 'fake-indexeddb/auto';
 const { mockDbContainer } = vi.hoisted(() => {
     return {
         mockDbContainer: {
-            db: null as any
+            db: null as RMDB | null
         }
     };
 });
@@ -33,7 +34,7 @@ vi.mock('../app/hooks/useCityData', () => ({
 }));
 
 describe('Database Service Tests', () => {
-    let testDb: any;
+    let testDb: RMDB;
 
     beforeAll(async () => {
         testDb = createTestDb();
@@ -43,7 +44,7 @@ describe('Database Service Tests', () => {
     });
 
     afterAll(async () => {
-        if (testDb) await testDb.close();
+        if (testDb) testDb.close();
         vi.restoreAllMocks();
     });
 
@@ -54,7 +55,7 @@ describe('Database Service Tests', () => {
             name: 'Test City',
             lastTick: Date.now(),
             population: 100,
-            techLevel: 'Stone',
+            techLevel: 'Stone' as const,
             defense: 10,
             exports: [],
             imports: []
@@ -64,7 +65,7 @@ describe('Database Service Tests', () => {
         const retrieved = await testDb.cities.get('city-test');
         
         expect(retrieved).toBeDefined();
-        expect(retrieved.name).toBe('Test City');
+        expect(retrieved!.name).toBe('Test City');
     });
 });
 

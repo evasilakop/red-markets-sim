@@ -29,9 +29,10 @@ export function useInstallPrompt() {
         // Check if app is already installed
         const isAlreadyInstalled =
             globalThis.matchMedia('(display-mode: standalone)').matches ||
-            (globalThis.navigator as any).standalone === true;
+            (globalThis.navigator as { standalone?: boolean }).standalone === true;
 
         if (isAlreadyInstalled) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time mount initialization
             setCanInstall(false);
             return;
         }
