@@ -20,6 +20,18 @@ export class RMDB extends Dexie {
             await tx.table('cities').clear();
             await tx.table('sectors').clear();
         });
+
+        this.version(3).stores({
+            worlds: 'id, name, turn, createdAt',
+            cities: 'id, worldId, name, lastTick, population, techLevel, [imports], [exports]',
+            sectors: 'id, cityId, type',
+        }).upgrade(async (tx) => {
+            // Add turn: 0 to existing worlds
+            const worlds = await tx.table('worlds').toArray();
+            await tx.table('worlds').bulkPut(
+                worlds.map((w: any) => ({...w, turn: w.turn ?? 0}))
+            );
+        });
     }
 }
 

@@ -3,6 +3,7 @@ import type { City, World } from '../../app/common/types';
 export const mockWorld: World = {
     id: 'world-1',
     name: 'Test World',
+    turn: 0,
     createdAt: Date.now(),
     notes: 'A test world'
 };

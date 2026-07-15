@@ -52,6 +52,10 @@ function validateWorldData(world: unknown): string | null {
     if (!w.id || !w.name || typeof w.createdAt !== 'number') {
         return 'Invalid world data structure.';
     }
+    // turn is optional for backward compatibility with older exports
+    if (w.turn !== undefined && typeof w.turn !== 'number') {
+        return 'Invalid world turn value.';
+    }
 
     return null;
 }

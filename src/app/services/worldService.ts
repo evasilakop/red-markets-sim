@@ -1,6 +1,7 @@
 import {db} from './db.ts';
 import {
     type OperationResult,
+    type Sector,
     type World
 } from '../common/types.ts';
 import {validateWorldBundle, type WorldBundle, MAX_FILE_SIZE, SUPPORTED_FILE_TYPES} from './validation.ts';
@@ -17,6 +18,7 @@ export async function createWorld(name: string): Promise<World> {
     const world: World = {
         id: uid(),
         name: name.trim() || 'Untitled World',
+        turn: 0,
         createdAt: Date.now()
     };
     await db.worlds.add(world);
@@ -148,10 +150,13 @@ export async function importWorld(file: File): Promise<{ success: boolean; world
             console.log(`Overwriting existing world: ${existingWorld.name}`);
         }
 
+        // Default turn to 0 for backward compat with older exports
+        const worldWithTurn = {...bundle.world, turn: bundle.world.turn ?? 0};
+
         // Import in a transaction (all or nothing)
         await db.transaction('rw', db.worlds, db.cities, db.sectors, async () => {
             // Import world
-            await db.worlds.put(bundle.world);
+            await db.worlds.put(worldWithTurn);
 
             // Import cities
             if (bundle.cities.length > 0) {
@@ -213,4 +218,82 @@ export async function deleteWorld(worldId: string): Promise<OperationResult> {
             error: `Failed to delete world: ${error instanceof Error ? error.message : 'Unknown error'}`
         };
     }
+}
+
+/**
+ * Result summary returned after a successful world-wide tick.
+ */
+export interface TickWorldResult {
+    /** The new turn number after incrementing. */
+    turn: number;
+    /** Count of sectors whose equilibrium changed during this tick. */
+    changedSectors: number;
+}
+
+/**
+ * Advances the entire world by one turn.
+ *
+ * 1. Loads all cities and sectors for the given world.
+ * 2. Sends ALL sectors through the provided tick function (worker).
+ * 3. Groups updated sectors by city and persists them.
+ * 4. Updates each city's lastTick timestamp.
+ * 5. Increments World.turn by 1.
+ *
+ * All database writes are wrapped in a single transaction for atomicity.
+ *
+ * @param worldId - The world to advance.
+ * @param tickFn - The worker tick function: `(sectors: Sector[]) => Promise<Sector[]>`.
+ * @returns A result object with either a success summary or an error.
+ */
+export async function tickWorld(
+    worldId: string,
+    tickFn: (sectors: Sector[]) => Promise<Sector[]>
+): Promise<{success: true, result: TickWorldResult} | {success: false, error: string}> {
+    // 1. Load the world
+    const world = await db.worlds.get(worldId);
+    if (!world) {
+        return { success: false, error: 'World not found.' };
+    }
+
+    // 2. Load all cities in the world
+    const cities = await db.cities.where({ worldId }).toArray();
+
+    // 3. Load all sectors for all cities
+    const cityIds = cities.map((c) => c.id);
+    const oldSectors = await db.sectors.where('cityId').anyOf(cityIds).toArray();
+
+    // 4. Send all sectors through the worker tick function as one batch
+    const newSectors = await tickFn(oldSectors);
+
+    // 5. Count sectors whose equilibrium changed
+    const changedSectors = newSectors.filter(
+        (ns, i) => ns.equilibrium !== oldSectors[i].equilibrium
+    ).length;
+
+    // 6. Build a map of updated sectors grouped by cityId
+    const sectorsByCity = new Map<string, Sector[]>();
+    for (const sector of newSectors) {
+        const existing = sectorsByCity.get(sector.cityId) ?? [];
+        existing.push(sector);
+        sectorsByCity.set(sector.cityId, existing);
+    }
+
+    // 7. Persist everything in a single transaction
+    const now = Date.now();
+    const newTurn = world.turn + 1;
+
+    await db.transaction('rw', db.sectors, db.cities, db.worlds, async () => {
+        // Update sectors
+        await db.sectors.bulkPut(newSectors);
+
+        // Update each city's lastTick
+        for (const city of cities) {
+            await db.cities.update(city.id, { lastTick: now });
+        }
+
+        // Increment world turn
+        await db.worlds.update(worldId, { turn: newTurn });
+    });
+
+    return { success: true, result: { turn: newTurn, changedSectors } };
 }
