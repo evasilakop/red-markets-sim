@@ -1,4 +1,4 @@
-import type {City, Sector, World, TechLevel} from '../common/types.ts';
+import type {City, Sector, TechLevel, World} from '../common/types.ts';
 import { TECH_LEVELS } from '../common/constants.ts';
 
 /**
@@ -18,7 +18,6 @@ export interface WorldBundle {
     exportedAt: number;
 }
 
-// Constants
 /** Maximum allowed file size for imports (10MB) */
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -26,108 +25,63 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 export const SUPPORTED_FILE_TYPES = ['application/json', 'text/plain'];
 
 /**
- * Checks if the current browser supports all required APIs for file operations.
+ * Validates the version field of a world bundle.
  *
- * @returns Object containing support status and list of missing features
- *
- */
-export const checkBrowserSupport = (): { supported: boolean; missingFeatures: string[] } => {
-    const missing: string[] = [];
-
-    // Check for File API support (needed for file reading)
-    if (!globalThis.File || !globalThis.FileReader || !globalThis.FileList || !globalThis.Blob) {
-        missing.push('File API');
-    }
-
-    // Check for JSON support (should be universal, but just in case)
-    if (!globalThis.JSON) {
-        missing.push('JSON parsing');
-    }
-
-    // Check for URL.createObjectURL (needed for file downloads)
-    if (!globalThis.URL?.createObjectURL) {
-        missing.push('File downloads');
-    }
-
-    return {
-        supported: missing.length === 0,
-        missingFeatures: missing
-    };
-};
-
-/**
- * Converts a file size in bytes to a human-readable string.
- *
- * @param bytes - File size in bytes
- * @returns Formatted string like "1.5 MB" or "512 KB"
- */
-export const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-/**
- * Validates the structure and content of a world bundle for import.
- * Performs comprehensive validation including data types, relationships,
- * and business rule constraints.
- *
- * @param bundle - The parsed JSON object to validate
+ * @param version - The version value to validate
  * @returns Error message string if validation fails, null if valid
- *
  */
-export function validateWorldBundle(bundle: unknown): string | null {
-    // Check basic structure
-    if (!bundle || typeof bundle !== 'object') {
-        return 'Invalid file format.';
-    }
-
-    const b = bundle as Record<string, unknown>;
-
-    // Validate version field
-    if (typeof b.version !== 'number') {
+function validateVersion(version: unknown): string | null {
+    if (typeof version !== 'number') {
         return 'Missing or invalid version field.';
     }
+    return null;
+}
 
-    // Validate world object exists
-    if (!b.world || typeof b.world !== 'object') {
+/**
+ * Validates the world data object in a world bundle.
+ *
+ * @param world - The world object to validate
+ * @returns Error message string if validation fails, null if valid
+ */
+function validateWorldData(world: unknown): string | null {
+    if (!world || typeof world !== 'object') {
         return 'Missing or invalid world data.';
     }
 
-    // Validate arrays exist
-    if (!Array.isArray(b.cities)) {
-        return 'Missing or invalid cities data.';
-    }
-
-    if (!Array.isArray(b.sectors)) {
-        return 'Missing or invalid sectors data.';
-    }
-
-    // Validate world object structure
-    const world = b.world as Record<string, unknown>;
-    if (!world.id || !world.name || typeof world.createdAt !== 'number') {
+    const w = world as Record<string, unknown>;
+    if (!w.id || !w.name || typeof w.createdAt !== 'number') {
         return 'Invalid world data structure.';
     }
 
-    // Validate each city
-    for (const city of b.cities as Array<Record<string, unknown>>) {
+    return null;
+}
 
+/**
+ * Validates the cities array in a world bundle.
+ *
+ * @param cities - The cities array to validate
+ * @param worldId - The world ID that all cities must reference
+ * @returns Error message string if validation fails, null if valid
+ */
+function validateCities(cities: unknown[], worldId: string): string | null {
+    for (const city of cities as Array<Record<string, unknown>>) {
+        // Core identity fields
         if (!city.id || !city.worldId || !city.name || typeof city.lastTick !== 'number') {
             return 'Invalid city data structure.';
         }
+        // Population
         if (typeof city.population !== 'number') {
             return 'Missing or invalid city field: population.';
         }
+        // Tech level
         if (!TECH_LEVELS.includes(city.techLevel as TechLevel)) {
             return 'Missing or invalid city field: techLevel.';
         }
+        // Defense
         if (typeof city.defense !== 'number') {
             return 'Missing or invalid city field: defense.';
         }
+        // Trade arrays
         if (!Array.isArray(city.exports)) {
             return 'Missing or invalid city field: exports.';
         }
@@ -135,14 +89,25 @@ export function validateWorldBundle(bundle: unknown): string | null {
             return 'Missing or invalid city field: imports.';
         }
         // Ensure city belongs to this world
-        if (city.worldId !== world.id) {
+        if (city.worldId !== worldId) {
             return 'City data does not match world ID.';
         }
     }
 
-    // Validate each sector
-    const cityIds = new Set(b.cities.map((c: { id: string }) => c.id));
-    for (const sector of b.sectors as Array<Record<string, unknown>>) {
+    return null;
+}
+
+/**
+ * Validates the sectors array in a world bundle.
+ *
+ * @param sectors - The sectors array to validate
+ * @param cities - The cities array used to verify city references
+ * @returns Error message string if validation fails, null if valid
+ */
+function validateSectors(sectors: unknown[], cities: unknown[]): string | null {
+    const cityIds = new Set((cities as Array<Record<string, unknown>>).map((c) => c.id as string));
+
+    for (const sector of sectors as Array<Record<string, unknown>>) {
         // Check required fields
         if (!sector.id || !sector.cityId || !sector.type ||
             typeof sector.supply !== 'number' || typeof sector.demand !== 'number') {
@@ -160,5 +125,50 @@ export function validateWorldBundle(bundle: unknown): string | null {
         }
     }
 
-    return null; // All validation passed
+    return null;
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────────
+
+/**
+ * Validates the structure and content of a world bundle for import.
+ * Delegates to focused sub-validators for version, world data, cities, and sectors.
+ *
+ * @param bundle - The parsed JSON object to validate
+ * @returns Error message string if validation fails, null if valid
+ */
+export function validateWorldBundle(bundle: unknown): string | null {
+    // Check basic structure
+    if (!bundle || typeof bundle !== 'object') {
+        return 'Invalid file format.';
+    }
+
+    const b = bundle as Record<string, unknown>;
+
+    // Validate version
+    const versionError = validateVersion(b.version);
+    if (versionError) return versionError;
+
+    // Validate world data
+    const worldError = validateWorldData(b.world);
+    if (worldError) return worldError;
+
+    // Validate arrays exist
+    if (!Array.isArray(b.cities)) {
+        return 'Missing or invalid cities data.';
+    }
+    if (!Array.isArray(b.sectors)) {
+        return 'Missing or invalid sectors data.';
+    }
+
+    // Validate cities against world ID
+    const worldId = (b.world as Record<string, unknown>).id as string;
+    const cityError = validateCities(b.cities, worldId);
+    if (cityError) return cityError;
+
+    // Validate sectors against city references
+    const sectorError = validateSectors(b.sectors, b.cities);
+    if (sectorError) return sectorError;
+
+    return null;
 }

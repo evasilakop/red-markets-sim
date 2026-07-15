@@ -3,7 +3,7 @@ import {
     type OperationResult,
     type World
 } from '../common/types.ts';
-import {validateWorldBundle, type WorldBundle} from './validation.ts';
+import {validateWorldBundle, type WorldBundle, MAX_FILE_SIZE, SUPPORTED_FILE_TYPES} from './validation.ts';
 import { removeAllCitiesInWorld } from './cityService.ts';
 
 import { generateId } from '../utils/idUtils.ts';
@@ -88,6 +88,23 @@ export async function exportWorld(worldId: string): Promise<OperationResult> {
 
 export async function importWorld(file: File): Promise<{ success: boolean; worldName: string; error?: string }> {
     try {
+        // File-level validation — reject early before any I/O
+        if (file.size > MAX_FILE_SIZE) {
+            return {
+                success: false,
+                worldName: '',
+                error: `File too large (max ${MAX_FILE_SIZE} bytes).`,
+            };
+        }
+
+        if (!SUPPORTED_FILE_TYPES.includes(file.type)) {
+            return {
+                success: false,
+                worldName: '',
+                error: 'Unsupported file type. Please select a valid .rmworld.json file.',
+            };
+        }
+
         // Read the file
         const fileText = await file.text();
 
