@@ -49,7 +49,7 @@ World management UI allows users to create, select, delete worlds, and import/ex
 1. User clicks "Export World" (only available when world selected)
 2. Browser downloads JSON file: `[WorldName].rmworld.json`
 3. **Success feedback:** Brief "World exported successfully" message
-4. **File contents:** `{ version: 1, world: {...}, cities: [...], sectors: [...] }`
+4. **File contents:** `{ version: CURRENT_BUNDLE_VERSION, world: {...}, cities: [...], sectors: [...] }`
 
 ### Import World Flow
 

@@ -53,7 +53,7 @@ To avoid circular dependencies, the system follows a one-way flow:
 Operations that touch multiple tables (e.g., adding a city and its 10 sectors) are wrapped in `db.transaction` blocks. The `WorldService` typically owns the transaction boundary for world-level deletions to ensure atomicity.
 
 ### 3.3 Centralized Constants
-All system limits (e.g., `MAX_SUPPLY`, `MAX_MAGNITUDE`) are housed in `common/constants.ts`. The simulation engine strictly consumes these constants to ensure rulebook consistency across the application.
+All system limits (e.g., `MAX_SUPPLY`, `MAX_MAGNITUDE`) are housed in `common/constants.ts`. The simulation engine strictly consumes these constants to ensure rulebook consistency across the application. The export bundle format version (`CURRENT_BUNDLE_VERSION`) is also defined here — a single source of truth that both `exportWorld` and `importWorld` reference, so bumping the format version updates both paths automatically.
 
 ## 4. Future evolution paths
 

@@ -1,6 +1,0 @@
-{
-    "version": 999,
-    "world": { "id": "test", "name": "Future World", "createdAt": 1234567890 },
-    "cities": [],
-    "sectors": []
-}

@@ -4,6 +4,7 @@ import {
     type Sector,
     type World
 } from '../common/types.ts';
+import {CURRENT_BUNDLE_VERSION} from '../common/constants.ts';
 import {validateWorldBundle, type WorldBundle, MAX_FILE_SIZE, SUPPORTED_FILE_TYPES} from './validation.ts';
 import { removeAllCitiesInWorld } from './cityService.ts';
 
@@ -49,8 +50,8 @@ export async function exportWorld(worldId: string): Promise<OperationResult> {
 
         // Create the bundle
         const bundle: WorldBundle = {
-            version: 1,
-            world,
+            version: CURRENT_BUNDLE_VERSION,
+            world: world,
             cities,
             sectors,
             exportedAt: Date.now()
@@ -135,7 +136,7 @@ export async function importWorld(file: File): Promise<{ success: boolean; world
         }
 
         // Check version compatibility
-        if (bundle.version > 1) {
+        if (bundle.version > CURRENT_BUNDLE_VERSION) {
             return {
                 success: false,
                 worldName: bundle.world.name,
@@ -235,9 +236,8 @@ export interface TickWorldResult {
  *
  * 1. Loads all cities and sectors for the given world.
  * 2. Sends ALL sectors through the provided tick function (worker).
- * 3. Groups updated sectors by city and persists them.
- * 4. Updates each city's lastTick timestamp.
- * 5. Increments World.turn by 1.
+ * 3. Updates each city's lastTick timestamp.
+ * 4. Increments World.turn by 1.
  *
  * All database writes are wrapped in a single transaction for atomicity.
  *
@@ -270,15 +270,7 @@ export async function tickWorld(
         (ns, i) => ns.equilibrium !== oldSectors[i].equilibrium
     ).length;
 
-    // 6. Build a map of updated sectors grouped by cityId
-    const sectorsByCity = new Map<string, Sector[]>();
-    for (const sector of newSectors) {
-        const existing = sectorsByCity.get(sector.cityId) ?? [];
-        existing.push(sector);
-        sectorsByCity.set(sector.cityId, existing);
-    }
-
-    // 7. Persist everything in a single transaction
+    // 6. Persist everything in a single transaction
     const now = Date.now();
     const newTurn = world.turn + 1;
 

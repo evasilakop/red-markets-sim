@@ -117,6 +117,8 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: Readonly<Wor
         if (!selectedWorld) return;
         const result = await tickWorld(selectedWorld.id, tick);
         if (result.success) {
+            // Derive the updated world from tickWorld's return value
+            onWorldSelect({ ...selectedWorld, turn: result.result.turn });
             await refreshWorlds();
             showSuccess(
                 `World advanced to Turn ${result.result.turn}. ${result.result.changedSectors} sectors changed state.`

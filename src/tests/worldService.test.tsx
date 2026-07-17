@@ -318,6 +318,34 @@ describe('worldService - tickWorld', () => {
         expect(cityIdsReceived).toEqual(new Set(testCityIds));
     });
 
+    it('should accumulate turn count across multiple sequential ticks', async () => {
+        // Read current turn as baseline (accounts for any test-ordering effects)
+        const worldBefore = await testDb.worlds.get(testWorldId);
+        const baseline = worldBefore!.turn;
+
+        // First tick
+        const r1 = await worldService.tickWorld(testWorldId, mockTickFn);
+        expect(r1.success).toBe(true);
+        if (!r1.success) return;
+        expect(r1.result.turn).toBe(baseline + 1);
+
+        // Second tick
+        const r2 = await worldService.tickWorld(testWorldId, mockTickFn);
+        expect(r2.success).toBe(true);
+        if (!r2.success) return;
+        expect(r2.result.turn).toBe(baseline + 2);
+
+        // Third tick
+        const r3 = await worldService.tickWorld(testWorldId, mockTickFn);
+        expect(r3.success).toBe(true);
+        if (!r3.success) return;
+        expect(r3.result.turn).toBe(baseline + 3);
+
+        // Verify DB persisted correctly
+        const worldAfter = await testDb.worlds.get(testWorldId);
+        expect(worldAfter!.turn).toBe(baseline + 3);
+    });
+
     it('should return error when world does not exist', async () => {
         const result = await worldService.tickWorld('non-existent-id', mockTickFn);
 

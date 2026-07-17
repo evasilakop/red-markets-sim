@@ -43,3 +43,6 @@ export const MIN_MAGNITUDE = 0;
 export const MAX_MAGNITUDE = 10;
 
 export const TECH_LEVELS: TechLevel[] = ['Stone', 'Iron', 'Industrial', 'Digital', 'Cutting Edge'];
+
+/** Current export bundle format version. Bump when World, City, or Sector schema changes. */
+export const CURRENT_BUNDLE_VERSION = 1;

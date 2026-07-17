@@ -75,8 +75,10 @@ Goals
 
 ## Versioning and migration
 
-- Export bundle includes version: integer starting at 1
-- If schema changes, bump version and add a simple migration note (e.g., derive new field on import if missing)
+- Export bundle format version is defined as `CURRENT_BUNDLE_VERSION` in `src/app/common/constants.ts`
+- On export, the bundle is stamped with the current constant value
+- On import, if the bundle version exceeds `CURRENT_BUNDLE_VERSION`, the import is rejected with a "newer version" error
+- If schema changes, bump `CURRENT_BUNDLE_VERSION` in constants.ts — both export and import stay in sync automatically
 - Keep DTOs stable; add fields with defaults rather than renaming where possible
 
 ## Storage mapping
