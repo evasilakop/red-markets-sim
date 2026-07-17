@@ -34,6 +34,7 @@ export type Equilibrium = 'FLOODED' | 'VOLATILE' | 'SUBSIDIARY' | 'SCARCE';
 export interface World {
     id: string;
     name: string;
+    turn: number;
     createdAt: number;
     notes?: string | null;
 }

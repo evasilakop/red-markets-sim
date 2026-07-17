@@ -1,12 +1,14 @@
 import {useCallback, useEffect, useState} from 'react';
 import {type World} from '../../common/types';
 import {useMessages} from '../../hooks/useMessages.ts'
+import {useSimWorker} from '../../hooks/useSimWorker.ts'
 import {
     createWorld,
     deleteWorld,
     exportWorld,
     importWorld,
-    listWorlds
+    listWorlds,
+    tickWorld
 } from '../../services/worldService';
 import {
     Box,
@@ -28,6 +30,7 @@ interface WorldManagerProps {
 export default function WorldTopBar({selectedWorld, onWorldSelect}: Readonly<WorldManagerProps>) {
     const [worlds, setWorlds] = useState<World[]>([]);
     const {showSuccess, showError} = useMessages();
+    const {busy, tick} = useSimWorker();
 
     const refreshWorlds = useCallback(async (isActive: boolean = true) => {
         try {
@@ -109,6 +112,22 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: Readonly<Wor
         showSuccess("World exported");
     };
 
+    // ADVANCE WORLD (tick all sectors, increment turn)
+    const handleAdvanceWorld = async () => {
+        if (!selectedWorld) return;
+        const result = await tickWorld(selectedWorld.id, tick);
+        if (result.success) {
+            // Derive the updated world from tickWorld's return value
+            onWorldSelect({ ...selectedWorld, turn: result.result.turn });
+            await refreshWorlds();
+            showSuccess(
+                `World advanced to Turn ${result.result.turn}. ${result.result.changedSectors} sectors changed state.`
+            );
+        } else {
+            showError(result.error);
+        }
+    };
+
     // DELETE
     const openDeleteModal = () => {
         if (!selectedWorld) return;
@@ -171,6 +190,11 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: Readonly<Wor
                 {selectedWorld && (
                     <>
                         <Button onClick={handleExport}>Export</Button>
+                        <Button
+                            disabled={busy}
+                            onClick={handleAdvanceWorld}>
+                            Advance World (Turn {selectedWorld.turn})
+                        </Button>
                         <Button color={'red'}
                                 variant={'light'}
                                 onClick={openDeleteModal}>
@@ -201,6 +225,9 @@ export default function WorldTopBar({selectedWorld, onWorldSelect}: Readonly<Wor
                     {selectedWorld && (
                         <>
                             <Menu.Item onClick={handleExport}>Export World</Menu.Item>
+                            <Menu.Item disabled={busy} onClick={handleAdvanceWorld}>
+                                Advance World (Turn {selectedWorld.turn})
+                            </Menu.Item>
                             <Menu.Divider />
                             <Menu.Item color={'red'} onClick={openDeleteModal}>Delete World</Menu.Item>
                         </>

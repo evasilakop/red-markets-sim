@@ -161,6 +161,6 @@ SPECULATE=4
 ## Data Management
 
 * **Local Storage:** All data is saved to your browser (IndexedDB). It persists even if you close the tab.
-* **Export:** You can download your world as a `.json` file to back it up or share it with another GM.
+* **Export:** You can download your world as a `.json` file to back it up or share it with another GM. Exported files include a format version number for future compatibility.
 * **Import:** Restore a world from a `.json` file.
 

@@ -3,6 +3,7 @@ import { createTestDb } from './test-utils';
 import * as worldService from '../app/services/worldService';
 import * as cityService from '../app/services/cityService';
 import { RMDB } from '../app/services/db';
+import type { Sector } from '../app/common/types';
 
 import 'fake-indexeddb/auto';
 
@@ -202,5 +203,155 @@ describe('worldService - import/export', () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('exports');
+    });
+});
+
+describe('worldService - tickWorld', () => {
+    let testDb: RMDB;
+    let testWorldId: string;
+    let testCityIds: string[];
+
+    /**
+     * A pass-through mock tick that only updates `updatedAt` without changing equilibrium.
+     * Used for tests where equilibrium changes are irrelevant.
+     */
+    function mockTickFn(sectors: Sector[]): Promise<Sector[]> {
+        return Promise.resolve(
+            sectors.map((s) => ({...s, updatedAt: Date.now()}))
+        );
+    }
+
+    beforeAll(async () => {
+        testDb = createTestDb();
+        mockDbContainer.db = testDb;
+
+        // Create a world with turn at 0
+        const world = await worldService.createWorld('Tick World');
+        testWorldId = world.id;
+
+        // Create two cities, each with 10 sectors
+        testCityIds = [];
+        for (let i = 0; i < 2; i++) {
+            const { city } = await cityService.addCity(testWorldId, {
+                name: `City ${i}`,
+                population: 1000,
+                techLevel: 'Industrial',
+                defense: 50,
+                exports: [],
+                imports: [],
+            });
+            testCityIds.push(city.id);
+        }
+    });
+
+    afterAll(async () => {
+        if (testDb) await testDb.close();
+        vi.restoreAllMocks();
+    });
+
+    it('should increment World.turn by exactly 1', async () => {
+        const worldBefore = await testDb.worlds.get(testWorldId);
+        expect(worldBefore!.turn).toBe(0);
+
+        const result = await worldService.tickWorld(testWorldId, mockTickFn);
+
+        expect(result.success).toBe(true);
+        if (!result.success) return;
+
+        const worldAfter = await testDb.worlds.get(testWorldId);
+        expect(worldAfter!.turn).toBe(1);
+        expect(result.result.turn).toBe(1);
+    });
+
+    it('should return summary with correct changedSectors count', async () => {
+        // Use a tick fn that always flips the first sector to a different equilibrium
+        const flipTickFn = (sectors: Sector[]): Promise<Sector[]> => {
+            return Promise.resolve(
+                sectors.map((s, i) => {
+                    if (i === 0) {
+                        const flipped = s.equilibrium === 'SCARCE' ? 'FLOODED' : 'SCARCE';
+                        return {...s, equilibrium: flipped, updatedAt: Date.now()};
+                    }
+                    return s;
+                })
+            );
+        };
+
+        const result = await worldService.tickWorld(testWorldId, flipTickFn);
+
+        expect(result.success).toBe(true);
+        if (!result.success) return;
+
+        expect(result.result.changedSectors).toBe(1);
+    });
+
+    it('should update each city lastTick', async () => {
+        const beforeTick = Date.now();
+
+        await worldService.tickWorld(testWorldId, mockTickFn);
+
+        const cities = await testDb.cities.where({ worldId: testWorldId }).toArray();
+        expect(cities).toHaveLength(2);
+        for (const city of cities) {
+            expect(city.lastTick).toBeGreaterThanOrEqual(beforeTick);
+        }
+    });
+
+    it('should tick all sectors from all cities', async () => {
+        // Use a tracked mock tick that records how many sectors it receives
+        let sectorsReceived: Sector[] = [];
+        const trackedTickFn = (sectors: Sector[]): Promise<Sector[]> => {
+            sectorsReceived = sectors;
+            return Promise.resolve(
+                sectors.map((s) => ({...s, updatedAt: Date.now()}))
+            );
+        };
+
+        const result = await worldService.tickWorld(testWorldId, trackedTickFn);
+        expect(result.success).toBe(true);
+
+        // 2 cities x 10 sectors = 20 sectors must be sent to tickFn
+        expect(sectorsReceived).toHaveLength(20);
+
+        // Verify sectors belong to both cities
+        const cityIdsReceived = new Set(sectorsReceived.map((s) => s.cityId));
+        expect(cityIdsReceived).toEqual(new Set(testCityIds));
+    });
+
+    it('should accumulate turn count across multiple sequential ticks', async () => {
+        // Read current turn as baseline (accounts for any test-ordering effects)
+        const worldBefore = await testDb.worlds.get(testWorldId);
+        const baseline = worldBefore!.turn;
+
+        // First tick
+        const r1 = await worldService.tickWorld(testWorldId, mockTickFn);
+        expect(r1.success).toBe(true);
+        if (!r1.success) return;
+        expect(r1.result.turn).toBe(baseline + 1);
+
+        // Second tick
+        const r2 = await worldService.tickWorld(testWorldId, mockTickFn);
+        expect(r2.success).toBe(true);
+        if (!r2.success) return;
+        expect(r2.result.turn).toBe(baseline + 2);
+
+        // Third tick
+        const r3 = await worldService.tickWorld(testWorldId, mockTickFn);
+        expect(r3.success).toBe(true);
+        if (!r3.success) return;
+        expect(r3.result.turn).toBe(baseline + 3);
+
+        // Verify DB persisted correctly
+        const worldAfter = await testDb.worlds.get(testWorldId);
+        expect(worldAfter!.turn).toBe(baseline + 3);
+    });
+
+    it('should return error when world does not exist', async () => {
+        const result = await worldService.tickWorld('non-existent-id', mockTickFn);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error).toContain('not found');
+        }
     });
 });
